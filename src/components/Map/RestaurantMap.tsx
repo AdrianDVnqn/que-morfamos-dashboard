@@ -41,12 +41,16 @@ export default function RestaurantMap() {
         barrios: string[];
         categories: string[];
         ratingRanges: string[];
+        reviewRange: number[]; // [min, max]
     }>({
         zones: [],
         barrios: [],
         categories: [],
-        ratingRanges: []
+        ratingRanges: [],
+        reviewRange: [0, 50000] // Default wide range
     });
+
+    const [maxReviews, setMaxReviews] = useState(2000);
 
     // Derived Data for Filter Lists
     const [filterOptions, setFilterOptions] = useState<{
@@ -174,7 +178,13 @@ export default function RestaurantMap() {
         });
     };
 
-    const resetFilters = () => setFilters({ zones: [], barrios: [], categories: [], ratingRanges: [] });
+    const resetFilters = () => setFilters({
+        zones: [],
+        barrios: [],
+        categories: [],
+        ratingRanges: [],
+        reviewRange: [0, maxReviews]
+    });
 
     // Filter Logic
     const filteredLugares = placesFilter(lugares, filters);
@@ -217,6 +227,11 @@ export default function RestaurantMap() {
                     // console.log(`[Filter] Rejected ${p.restaurante} because rating ${rating} not in ${filters.ratingRanges}`);
                     return false;
                 }
+            }
+
+            if (filters.reviewRange && filters.reviewRange.length === 2) {
+                const reviews = p.total_reviews_google || 0;
+                if (reviews < filters.reviewRange[0] || reviews > filters.reviewRange[1]) return false;
             }
 
             return true;

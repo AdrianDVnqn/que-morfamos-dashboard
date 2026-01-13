@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { X, Filter, ChevronDown, Check } from "lucide-react";
 import {
     DropdownMenu,
@@ -20,9 +21,11 @@ interface MapFiltersProps {
         barrios: string[];
         categories: string[];
         ratingRanges: string[];
+        reviewRange: number[];
     };
     onFilterChange: (key: string, value: any) => void;
     onReset: () => void;
+    maxReviews: number;
 }
 
 const RATING_RANGES = [
@@ -41,7 +44,8 @@ export default function MapFilters({
     categories,
     filters,
     onFilterChange,
-    onReset
+    onReset,
+    maxReviews
 }: MapFiltersProps) {
 
     const toggleFilter = (key: string, item: string) => {
@@ -164,6 +168,47 @@ export default function MapFilters({
                             )
                         })}
                     </div>
+                </div>
+
+                {/* Reviews Range Slider */}
+                <div className="space-y-3 pt-2 border-t border-zinc-800">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-xs text-zinc-400 font-medium">Rango de Reseñas</label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="number"
+                                min={0}
+                                max={filters.reviewRange[1]}
+                                value={filters.reviewRange[0]}
+                                onChange={(e) => {
+                                    const val = Math.max(0, parseInt(e.target.value) || 0);
+                                    onFilterChange('reviewRange', [val, filters.reviewRange[1]]);
+                                }}
+                                className="w-16 bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-xs text-right focus:outline-none focus:border-yellow-500/50 transition-colors"
+                            />
+                            <span className="text-zinc-600">-</span>
+                            <input
+                                type="number"
+                                min={filters.reviewRange[0]}
+                                max={maxReviews}
+                                value={filters.reviewRange[1]}
+                                onChange={(e) => {
+                                    const val = Math.min(maxReviews, parseInt(e.target.value) || 0);
+                                    onFilterChange('reviewRange', [filters.reviewRange[0], val]);
+                                }}
+                                className="w-16 bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-xs text-right focus:outline-none focus:border-yellow-500/50 transition-colors"
+                            />
+                        </div>
+                    </div>
+                    <Slider
+                        min={0}
+                        max={maxReviews}
+                        step={10}
+                        minStepsBetweenThumbs={1}
+                        value={filters.reviewRange}
+                        onValueChange={(vals) => onFilterChange('reviewRange', vals)}
+                        className="py-1"
+                    />
                 </div>
             </div>
         </Card>
