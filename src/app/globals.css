@@ -167,3 +167,16 @@
     filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
   }
 }
+
+/* Large Dialog (not fullscreen) */
+[data-state="open"][role="dialog"] {
+  max-width: 90vw !important;
+  width: 90vw !important;
+  height: 90vh !important;
+  max-height: 90vh !important;
+}
+
+[data-radix-dialog-overlay] {
+  background-color: hsl(var(--background) / 0.7) !important;
+  backdrop-filter: blur(2px);
+}

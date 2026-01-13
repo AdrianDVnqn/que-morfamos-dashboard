@@ -16,15 +16,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
+import PlaceDetailsDialog from "@/components/places/PlaceDetailsDialog"
 
 interface Lugar {
     id: number
@@ -58,6 +51,7 @@ export default function LugaresPage() {
     const [selectedLugar, setSelectedLugar] = useState<Lugar | null>(null)
     const [openSheet, setOpenSheet] = useState(false)
     const [placeReviews, setPlaceReviews] = useState<Review[]>([])
+    const [allPlaceReviews, setAllPlaceReviews] = useState<Review[]>([])
     const [reviewsLoading, setReviewsLoading] = useState(false)
     const [isSummaryExpanded, setIsSummaryExpanded] = useState(false)
 
@@ -113,6 +107,23 @@ export default function LugaresPage() {
         setReviewsLoading(true)
         console.log("🔍 Buscando reviews para:", nombreRestaurante)
         try {
+            // Fetch ALL reviews for analytics
+            const { data: allData, error: allError } = await supabase
+                .from("reviews")
+                .select("*")
+                .eq("restaurante", nombreRestaurante)
+                .order("fecha_original", { ascending: false })
+
+            if (allError) console.error("❌ Error fetching all reviews:", allError)
+
+            if (allData) {
+                setAllPlaceReviews(allData)
+                console.log("📊 Total reviews para análisis:", allData.length)
+            } else {
+                setAllPlaceReviews([])
+            }
+
+            // Fetch last 20 for display
             const { data, error } = await supabase
                 .from("reviews")
                 .select("*")
@@ -120,7 +131,7 @@ export default function LugaresPage() {
                 .order("fecha_original", { ascending: false })
                 .limit(20)
 
-            console.log("📄 Resultados:", data?.length)
+            console.log("📄 Últimas reviews para mostrar:", data?.length)
             if (error) console.error("❌ Error Supabase:", error)
 
             if (data) {
@@ -131,6 +142,7 @@ export default function LugaresPage() {
         } catch (error) {
             console.error("❌ Error fetching place reviews:", error)
             setPlaceReviews([])
+            setAllPlaceReviews([])
         } finally {
             setReviewsLoading(false)
         }
@@ -250,210 +262,16 @@ export default function LugaresPage() {
                 </CardContent>
             </Card>
 
-            {/* Panel de Detalles (Sheet) */}
-            <Sheet open={openSheet} onOpenChange={setOpenSheet}>
-                <SheetContent className="sm:max-w-[540px] overflow-y-auto w-full">
-                    {selectedLugar && (
-                        <div className="space-y-6">
-                            <SheetHeader>
-                                <SheetTitle className="text-2xl font-bold flex flex-col gap-2">
-                                    {selectedLugar.nombre}
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="text-sm font-normal">
-                                            {selectedLugar.categoria || "Gastronomía"}
-                                        </Badge>
-                                        {selectedLugar.rating_gral && (
-                                            <Badge className="bg-amber-500 hover:bg-amber-600">
-                                                {selectedLugar.rating_gral} ⭐
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </SheetTitle>
-                                <SheetDescription>
-                                    Datos detallados del establecimiento extraídos de Google Maps.
-                                </SheetDescription>
-                            </SheetHeader>
-
-                            <Separator />
-
-                            {/* Info General Data Grid */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                        <MapPin className="h-4 w-4" /> Dirección
-                                    </h4>
-                                    <p className="text-sm font-medium">{selectedLugar.direccion || "No especificada"}</p>
-                                    {selectedLugar.zona && (
-                                        <p className="text-xs text-muted-foreground">Zona: {selectedLugar.zona}</p>
-                                    )}
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                        <Globe className="h-4 w-4" /> Google Maps
-                                    </h4>
-                                    {selectedLugar.url ? (
-                                        <a href={selectedLugar.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline truncate block">
-                                            Ver en Maps ↗
-                                        </a>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground">-</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <Separator />
-
-
-
-                            {/* AI Summary Section */}
-                            <div className="bg-muted/50 p-4 rounded-lg border">
-                                <div
-                                    className="flex items-center justify-between cursor-pointer mb-2"
-                                    onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                                >
-                                    <h4 className="text-sm font-medium flex items-center gap-2 select-none">
-                                        <span className="text-xl">🤖</span> Resumen de IA
-                                    </h4>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 rounded-full">
-                                        {isSummaryExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                    </Button>
-                                </div>
-
-                                {selectedLugar.resumen_reviews ? (
-                                    <div className="relative">
-                                        <div
-                                            className={`transition-all duration-500 ease-in-out overflow-hidden ${isSummaryExpanded ? "max-h-[1000px]" : "max-h-24"}`}
-                                        >
-                                            <div className="space-y-2 pb-2">
-                                                <p className="text-sm text-foreground/90 leading-relaxed italic">
-                                                    "{selectedLugar.resumen_reviews}"
-                                                </p>
-
-                                                <p className={`text-[10px] text-muted-foreground text-right transition-opacity duration-500 ${isSummaryExpanded ? "opacity-100" : "opacity-0"}`}>
-                                                    Actualizado: {selectedLugar.embedding_updated_at ? new Date(selectedLugar.embedding_updated_at).toLocaleString() : "Sin fecha"}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Gradient fade overlay - Only visible when collapsed */}
-                                        <div
-                                            className={`absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-muted to-transparent pointer-events-none transition-opacity duration-300 ${isSummaryExpanded ? "opacity-0" : "opacity-100"}`}
-                                        />
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-muted-foreground">
-                                        No hay resumen generado aún. (Requiere {'>'}3 reviews válidas)
-                                    </p>
-                                )}
-
-                                {selectedLugar.resumen_reviews && (
-                                    <div className="mt-2 text-center">
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="text-xs h-auto p-0 text-muted-foreground"
-                                            onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                                        >
-                                            {isSummaryExpanded ? "Ver menos" : "Ver más"}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <Separator />
-
-                            {/* Stats Cards */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <Card>
-                                    <CardContent className="pt-6">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Users className="h-4 w-4 text-blue-500" />
-                                            <span className="text-sm font-medium text-muted-foreground">Total Reviews</span>
-                                        </div>
-                                        <div className="text-2xl font-bold">
-                                            {selectedLugar.total_reviews_google?.toLocaleString() || 0}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardContent className="pt-6">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <TrendingUp className="h-4 w-4 text-green-500" />
-                                            <span className="text-sm font-medium text-muted-foreground">Rating</span>
-                                        </div>
-                                        <div className="text-2xl font-bold">
-                                            {selectedLugar.rating_gral || "N/A"}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Promedio global
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            {/* Reviews List */}
-                            <div>
-                                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                    <Utensils className="h-4 w-4" />
-                                    Últimas Reseñas Guardadas
-                                </h3>
-
-                                {reviewsLoading ? (
-                                    <div className="space-y-3">
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="h-24 bg-muted/50 rounded-lg animate-pulse" />
-                                        ))}
-                                    </div>
-                                ) : placeReviews.length === 0 ? (
-                                    <div className="text-center py-8 text-muted-foreground border rounded-lg bg-muted/10">
-                                        No hay reseñas guardadas de este lugar en la base de datos.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {placeReviews.map((review) => (
-                                            <Card key={review.review_id || Math.random()} className="overflow-hidden">
-                                                <CardContent className="p-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <span className="font-medium text-sm truncate max-w-[200px]" title={review.autor}>
-                                                            {review.autor}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                            {review.fecha_original || "Fecha desc."}
-                                                        </span>
-                                                    </div>
-                                                    <div className="mb-2">
-                                                        <div className="flex text-amber-500 text-xs">
-                                                            {Array.from({ length: 5 }).map((_, i) => (
-                                                                <Star
-                                                                    key={i}
-                                                                    className={`h-3 w-3 ${i < (review.rating_user || 0) ? "fill-current" : "text-muted stroke-muted-foreground"}`}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-                                                        {review.texto ? (
-                                                            review.texto
-                                                        ) : (
-                                                            <span className="italic text-muted-foreground text-xs">Sin comentario escrito</span>
-                                                        )}
-                                                    </p>
-                                                    <div className="mt-3 pt-2 border-t flex justify-end">
-                                                        <span className="text-[10px] text-muted-foreground">
-                                                            Scrapeado el: {review.fecha_scraping ? new Date(review.fecha_scraping).toLocaleDateString("es-AR") : "-"}
-                                                        </span>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                        </div>
-                    )}
-                </SheetContent>
-            </Sheet>
+            {/* Place Details Dialog (Fullscreen) */}
+            <PlaceDetailsDialog
+                lugar={selectedLugar}
+                reviews={placeReviews}
+                allReviews={allPlaceReviews}
+                reviewsLoading={reviewsLoading}
+                open={openSheet}
+                onOpenChange={setOpenSheet}
+            />
         </div>
     )
 }
+
