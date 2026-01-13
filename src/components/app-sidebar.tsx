@@ -12,6 +12,7 @@ import {
     Utensils,
     Search,
     MessageSquare,
+    Map as MapIcon,
 } from "lucide-react"
 
 import {
@@ -57,6 +58,11 @@ const navItems = [
         title: "SQL Editor",
         url: "/sql",
         icon: Database,
+    },
+    {
+        title: "Mapa",
+        url: "/mapa",
+        icon: MapIcon,
     },
     {
         title: "Logs",
