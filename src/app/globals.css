@@ -119,7 +119,51 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Map Emoji Markers */
+.food-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.marker-emoji {
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: all 0.2s ease;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.food-marker:hover .marker-emoji {
+  transform: scale(1.2);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  opacity: 1;
+}
+
+.marker-highlighted .marker-emoji {
+  transform: scale(1.3);
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.8)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.8)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
   }
 }

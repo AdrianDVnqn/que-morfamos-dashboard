@@ -27,6 +27,7 @@ const customIcon = new L.Icon({
 import { supabase } from "@/lib/supabase";
 import { ZONAS_MAP, ZONE_COLORS, getZone } from "@/data/zones";
 import { convertGeoJSONCoordinates } from '@/lib/geoUtils';
+import { createCategoryIcon } from '@/lib/categoryIcons';
 
 import MapFilters from "./MapFilters";
 
@@ -361,8 +362,9 @@ export default function RestaurantMap() {
                         <LayerGroup>
                             {filteredLugares?.features?.map((lugar: any, idx: number) => {
                                 const [lon, lat] = lugar.geometry.coordinates;
+                                const categoryIcon = createCategoryIcon(lugar.properties.categoria || '');
                                 return (
-                                    <Marker key={idx} position={[lat, lon]} icon={customIcon}>
+                                    <Marker key={idx} position={[lat, lon]} icon={categoryIcon}>
                                         <Popup>
                                             <div className="p-1">
                                                 <h3 className="font-bold text-sm">{lugar.properties.restaurante}</h3>
