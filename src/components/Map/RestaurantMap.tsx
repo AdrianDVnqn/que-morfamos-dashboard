@@ -140,6 +140,18 @@ export default function RestaurantMap() {
                     categories: Array.from(categoriesSet).sort()
                 }));
 
+                // Calculate max reviews from data for the slider
+                const calculatedMaxReviews = Math.max(...data.map((l: any) => l.total_reviews_google || 0), 100);
+                setMaxReviews(calculatedMaxReviews);
+
+                // Update default range only if it hasn't been touched (simple check: if it equals the default wide 50k range)
+                setFilters(prev => {
+                    if (prev.reviewRange[1] === 50000) {
+                        return { ...prev, reviewRange: [0, calculatedMaxReviews] };
+                    }
+                    return prev;
+                });
+
             } catch (err: any) {
                 console.error("Error fetching lugares from Supabase:", err);
                 setError(`Falló carga de Lugares: ${err.message || JSON.stringify(err)}`);
@@ -321,6 +333,7 @@ export default function RestaurantMap() {
                 filters={filters}
                 onFilterChange={handleFilterChange}
                 onReset={resetFilters}
+                maxReviews={maxReviews}
             />
 
             <MapContainer
