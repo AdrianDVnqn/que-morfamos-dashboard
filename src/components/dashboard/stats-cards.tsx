@@ -256,7 +256,12 @@ export function StatsCards() {
                             {card.hasTooltip && card.tooltipContent && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Info className="h-3.5 w-3.5 text-gray-400 hover:text-cyan-400 transition-colors cursor-help ml-1" />
+                                        <button
+                                            type="button"
+                                            className="inline-flex items-center justify-center ml-1 rounded-full hover:bg-gray-800 p-0.5 transition-colors"
+                                        >
+                                            <Info className="h-3.5 w-3.5 text-gray-400 hover:text-cyan-400 transition-colors cursor-help" />
+                                        </button>
                                     </TooltipTrigger>
                                     <TooltipContent
                                         side="bottom"
