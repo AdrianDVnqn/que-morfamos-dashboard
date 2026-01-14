@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
 import {
     Utensils,
@@ -48,7 +49,6 @@ export function StatsCards() {
     const [reviewQuality, setReviewQuality] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
     const [reviewQuality24h, setReviewQuality24h] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
     const [loading, setLoading] = useState(true)
-    const [expandedCard, setExpandedCard] = useState<string | null>(null)
 
     useEffect(() => {
         async function fetchStats() {
@@ -254,14 +254,38 @@ export function StatsCards() {
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                             {card.title}
                             {card.hasTooltip && card.tooltipContent && (
-                                <button
-                                    type="button"
-                                    onClick={() => setExpandedCard(expandedCard === card.id ? null : card.id)}
-                                    className="inline-flex items-center justify-center ml-1 rounded-full hover:bg-gray-700 p-1 transition-colors"
-                                    title="Ver calidad de reviews"
-                                >
-                                    <Info className={`h-3.5 w-3.5 transition-colors ${expandedCard === card.id ? 'text-cyan-400' : 'text-gray-400 hover:text-cyan-400'}`} />
-                                </button>
+                                <Tooltip trigger="click">
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="inline-flex items-center justify-center ml-1 rounded-full hover:bg-gray-700 p-1 transition-colors"
+                                            title="Ver calidad de reviews"
+                                        >
+                                            <Info className="h-3.5 w-3.5 text-gray-400 hover:text-cyan-400 transition-colors" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" align="start" className="bg-slate-900 border-slate-700 p-3 w-64 z-50">
+                                        <div className="text-xs space-y-2">
+                                            <div className="font-semibold text-white pb-1">📊 Calidad de Reviews</div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">📝 Con texto útil (&gt;30 chars):</span>
+                                                <span className="font-medium text-emerald-400">{card.tooltipContent.conTextoUtil.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">🚫 Sin texto:</span>
+                                                <span className="font-medium text-rose-400">{card.tooltipContent.sinTexto.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between pt-1 border-t border-gray-700/50">
+                                                <span className="text-gray-400">✨ % Útiles para IA:</span>
+                                                <span className="font-bold text-cyan-400">
+                                                    {card.tooltipContent.total > 0
+                                                        ? ((card.tooltipContent.conTextoUtil / card.tooltipContent.total) * 100).toFixed(1)
+                                                        : 0}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
                             )}
                         </CardTitle>
                         <div className={`p-2 rounded-lg bg-gradient-to-br ${card.gradient}`}>
@@ -273,29 +297,6 @@ export function StatsCards() {
                         <p className="text-xs text-muted-foreground mt-1">
                             {card.description}
                         </p>
-
-                        {/* Panel expandible con click */}
-                        {card.hasTooltip && card.tooltipContent && expandedCard === card.id && (
-                            <div className="mt-3 pt-3 border-t border-gray-700 text-xs space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="font-semibold text-white pb-1">📊 Calidad de Reviews</div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-400">📝 Con texto útil (&gt;30 chars):</span>
-                                    <span className="font-medium text-emerald-400">{card.tooltipContent.conTextoUtil.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-400">🚫 Sin texto:</span>
-                                    <span className="font-medium text-rose-400">{card.tooltipContent.sinTexto.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between pt-1 border-t border-gray-700/50">
-                                    <span className="text-gray-400">✨ % Útiles para IA:</span>
-                                    <span className="font-bold text-cyan-400">
-                                        {card.tooltipContent.total > 0
-                                            ? ((card.tooltipContent.conTextoUtil / card.tooltipContent.total) * 100).toFixed(1)
-                                            : 0}%
-                                    </span>
-                                </div>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             ))}

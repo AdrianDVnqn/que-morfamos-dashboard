@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface KeywordData {
@@ -25,6 +26,16 @@ export default function TopKeywords({ keywords, maxItems = 12 }: TopKeywordsProp
         }
     };
 
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return null; // Prevent hydration issues or render before mount
+    }
+
     if (!topKeywords || topKeywords.length === 0) {
         return (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -34,8 +45,8 @@ export default function TopKeywords({ keywords, maxItems = 12 }: TopKeywordsProp
     }
 
     return (
-        <div className="w-full h-full p-4" style={{ minHeight: 450 }}>
-            <ResponsiveContainer width="100%" height={450}>
+        <div className="w-full h-full p-4 min-w-0" style={{ minHeight: 450 }}>
+            <ResponsiveContainer width="99%" height={450}>
                 <BarChart
                     data={topKeywords}
                     layout="vertical"
