@@ -17,14 +17,16 @@ import {
     Cell,
     LineChart,
     Line,
+    Legend,
 } from "recharts"
 
 const COLORS = [
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
+    "#8b5cf6", // violet
+    "#06b6d4", // cyan
+    "#f59e0b", // amber
+    "#10b981", // emerald
+    "#f43f5e", // rose
+    "#6366f1", // indigo
 ]
 
 interface ZonaData {
@@ -104,17 +106,42 @@ export function ReviewsByZonaChart() {
             <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={data} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis type="number" className="text-xs" />
-                        <YAxis dataKey="zona" type="category" width={100} className="text-xs" />
+                        <defs>
+                            <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#8b5cf6" />
+                                <stop offset="50%" stopColor="#06b6d4" />
+                                <stop offset="100%" stopColor="#10b981" />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                        <XAxis
+                            type="number"
+                            tick={{ fill: '#9ca3af', fontSize: 11 }}
+                            axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                        />
+                        <YAxis
+                            dataKey="zona"
+                            type="category"
+                            width={100}
+                            tick={{ fill: '#e5e7eb', fontSize: 11 }}
+                            axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                        />
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                borderColor: "hsl(var(--border))",
-                                borderRadius: "0.5rem",
+                                backgroundColor: "rgba(30, 30, 46, 0.95)",
+                                borderColor: "rgba(255, 255, 255, 0.1)",
+                                borderRadius: "0.75rem",
+                                color: "#fff",
+                                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                             }}
+                            formatter={(value) => [`${value} reviews`, 'Total']}
                         />
-                        <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+                        <Bar
+                            dataKey="count"
+                            fill="url(#barGradient)"
+                            radius={[0, 8, 8, 0]}
+                            className="drop-shadow-lg"
+                        />
                     </BarChart>
                 </ResponsiveContainer>
             </CardContent>
@@ -173,7 +200,7 @@ export function CategoriesChart() {
 
     return (
         <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
                     🥧 Por Categoría
                 </CardTitle>
@@ -184,22 +211,46 @@ export function CategoriesChart() {
                         <Pie
                             data={data}
                             cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ payload, percent }) => `${payload.categoria} (${((percent || 0) * 100).toFixed(0)}%)`}
+                            cy="45%"
+                            innerRadius={40}
                             outerRadius={80}
+                            paddingAngle={2}
                             dataKey="count"
+                            nameKey="categoria"
+                            stroke="none"
                         >
-                            {data.map((_, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            {data.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={COLORS[index % COLORS.length]}
+                                    className="drop-shadow-md"
+                                />
                             ))}
                         </Pie>
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                borderColor: "hsl(var(--border))",
-                                borderRadius: "0.5rem",
+                                backgroundColor: "rgba(30, 30, 46, 0.95)",
+                                borderColor: "rgba(255, 255, 255, 0.1)",
+                                borderRadius: "0.75rem",
+                                color: "#fff",
+                                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                             }}
+                            formatter={(value, name) => [
+                                `${value} lugares`,
+                                name as string
+                            ]}
+                        />
+                        <Legend
+                            layout="horizontal"
+                            verticalAlign="bottom"
+                            align="center"
+                            wrapperStyle={{
+                                paddingTop: "8px",
+                                fontSize: "12px",
+                            }}
+                            formatter={(value: string) => (
+                                <span style={{ color: "#e5e7eb" }}>{value}</span>
+                            )}
                         />
                     </PieChart>
                 </ResponsiveContainer>
