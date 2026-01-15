@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, LayersControl, LayerGroup } from "react-leaflet";
+import HeatmapLayer, { HeatmapPoint } from "./HeatmapLayer";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -52,6 +53,10 @@ export default function RestaurantMap() {
     });
 
     const [maxReviews, setMaxReviews] = useState(2000);
+
+    // Heatmap mode: 'reviews' = by total reviews, 'density' = by place count, 'rating' = by average rating
+    const [heatmapMode, setHeatmapMode] = useState<'reviews' | 'density' | 'rating'>('reviews');
+    const [showHeatmap, setShowHeatmap] = useState(false);
 
     // Derived Data for Filter Lists
     const [filterOptions, setFilterOptions] = useState<{
@@ -203,6 +208,30 @@ export default function RestaurantMap() {
     const filteredLugares = placesFilter(lugares, filters);
     const filteredBarrios = barriosFilter(barrios, filters);
 
+    // Compute heatmap points from filtered lugares
+    const heatPoints: HeatmapPoint[] = filteredLugares?.features?.map((f: any) => {
+        const [lon, lat] = f.geometry.coordinates;
+        const reviews = f.properties.total_reviews_google || 0;
+        const rating = typeof f.properties.rating_gral === 'string'
+            ? parseFloat(f.properties.rating_gral)
+            : (f.properties.rating_gral || 0);
+
+        // Intensity based on mode:
+        // - 'reviews': review count (shows popular places)
+        // - 'density': equal weight (shows concentration)
+        // - 'rating': rating value (shows quality hotspots)
+        let intensity = 1;
+        if (heatmapMode === 'reviews') {
+            intensity = reviews;
+        } else if (heatmapMode === 'rating') {
+            // Scale rating (0-5) to make differences more visible
+            // Using exponential scaling: higher ratings get more prominence
+            intensity = Math.pow(rating, 2); // 5^2 = 25, 4^2 = 16, 3^2 = 9
+        }
+
+        return { lat, lng: lon, intensity };
+    }) || [];
+
     function checkRating(rating: number, ranges: string[]) {
         if (ranges.length === 0) return true;
         return ranges.some(r => {
@@ -335,6 +364,10 @@ export default function RestaurantMap() {
                 onFilterChange={handleFilterChange}
                 onReset={resetFilters}
                 maxReviews={maxReviews}
+                showHeatmap={showHeatmap}
+                onShowHeatmapChange={setShowHeatmap}
+                heatmapMode={heatmapMode}
+                onHeatmapModeChange={setHeatmapMode}
             />
 
             <MapContainer
@@ -381,6 +414,28 @@ export default function RestaurantMap() {
                         </LayerGroup>
                     </LayersControl.Overlay>
                 </LayersControl>
+
+                {/* Heatmap Layer - controlled via showHeatmap state from filters panel */}
+                {showHeatmap && heatPoints.length > 0 && (
+                    <HeatmapLayer
+                        points={heatPoints}
+                        options={{
+                            radius: 30,
+                            blur: 25,
+                            maxZoom: 17,
+                            minOpacity: 0.5,
+                            gradient: {
+                                0.0: 'transparent',
+                                0.2: '#3b0764',  // deep purple
+                                0.4: '#7c3aed',  // violet
+                                0.6: '#f472b6',  // pink
+                                0.8: '#fbbf24',  // amber
+                                1.0: '#ffffff'   // white hot
+                            }
+                        }}
+                        key={`heatmap-${heatmapMode}-${filteredLugares?.features?.length}`}
+                    />
+                )}
             </MapContainer>
         </>
     );

@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { X, Filter, ChevronDown, Check } from "lucide-react";
+import { X, Filter, ChevronDown, Check, Flame } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -26,6 +26,11 @@ interface MapFiltersProps {
     onFilterChange: (key: string, value: any) => void;
     onReset: () => void;
     maxReviews: number;
+    // Heatmap controls
+    showHeatmap?: boolean;
+    onShowHeatmapChange?: (show: boolean) => void;
+    heatmapMode?: 'reviews' | 'density' | 'rating';
+    onHeatmapModeChange?: (mode: 'reviews' | 'density' | 'rating') => void;
 }
 
 const RATING_RANGES = [
@@ -45,7 +50,11 @@ export default function MapFilters({
     filters,
     onFilterChange,
     onReset,
-    maxReviews
+    maxReviews,
+    showHeatmap = false,
+    onShowHeatmapChange,
+    heatmapMode = 'reviews',
+    onHeatmapModeChange
 }: MapFiltersProps) {
 
     const toggleFilter = (key: string, item: string) => {
@@ -210,6 +219,82 @@ export default function MapFilters({
                         className="py-1"
                     />
                 </div>
+
+                {/* Heatmap Controls */}
+                {onShowHeatmapChange && (
+                    <div className="space-y-3 pt-3 border-t border-zinc-800">
+                        {/* Toggle Button */}
+                        <div
+                            onClick={() => onShowHeatmapChange(!showHeatmap)}
+                            className={`
+                                cursor-pointer flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all
+                                ${showHeatmap
+                                    ? 'bg-gradient-to-r from-orange-500/20 to-pink-500/20 border-orange-500/50 text-orange-200'
+                                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                                }
+                            `}
+                        >
+                            <div className="flex items-center gap-2">
+                                <Flame className={`w-4 h-4 ${showHeatmap ? 'text-orange-400' : 'text-zinc-500'}`} />
+                                <span className="text-xs font-medium">Mapa de Calor</span>
+                            </div>
+                            <div className={`
+                                w-8 h-4 rounded-full transition-all relative
+                                ${showHeatmap ? 'bg-orange-500' : 'bg-zinc-700'}
+                            `}>
+                                <div className={`
+                                    absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all
+                                    ${showHeatmap ? 'left-4' : 'left-0.5'}
+                                `} />
+                            </div>
+                        </div>
+
+                        {/* Mode Selector - only show when heatmap is visible */}
+                        {showHeatmap && onHeatmapModeChange && (
+                            <div className="grid grid-cols-3 gap-1.5">
+                                <div
+                                    onClick={() => onHeatmapModeChange('reviews')}
+                                    className={`
+                                        cursor-pointer text-[9px] px-1.5 py-2 rounded border transition-all text-center
+                                        ${heatmapMode === 'reviews'
+                                            ? 'bg-orange-500/20 border-orange-500/50 text-orange-200'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium">📊 Reseñas</div>
+                                    <div className="text-[7px] text-zinc-500 mt-0.5">Populares</div>
+                                </div>
+                                <div
+                                    onClick={() => onHeatmapModeChange('density')}
+                                    className={`
+                                        cursor-pointer text-[9px] px-1.5 py-2 rounded border transition-all text-center
+                                        ${heatmapMode === 'density'
+                                            ? 'bg-violet-500/20 border-violet-500/50 text-violet-200'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium">📍 Densidad</div>
+                                    <div className="text-[7px] text-zinc-500 mt-0.5">Concentración</div>
+                                </div>
+                                <div
+                                    onClick={() => onHeatmapModeChange('rating')}
+                                    className={`
+                                        cursor-pointer text-[9px] px-1.5 py-2 rounded border transition-all text-center
+                                        ${heatmapMode === 'rating'
+                                            ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-200'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium">⭐ Rating</div>
+                                    <div className="text-[7px] text-zinc-500 mt-0.5">Mejor calidad</div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </Card>
     );
