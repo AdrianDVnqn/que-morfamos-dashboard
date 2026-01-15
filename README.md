@@ -1,71 +1,100 @@
-# Qué Morfamos Dashboard 🍕📊
+# Qué Morfamos - Dashboard
 
-Dashboard moderno para visualizar estadísticas de restaurantes y ejecutar consultas SQL sobre la base de datos de Supabase.
+Panel de monitoreo y análisis para el sistema de recomendaciones gastronómicas Qué Morfamos. Permite visualizar estadísticas de la base de datos, monitorear la actividad de scraping y ejecutar consultas SQL personalizadas.
 
-## ✨ Features
+## Demo en Vivo
 
-- 📊 **Dashboard** - KPIs y gráficos de distribución (zonas, categorías, timeline)
-- 📈 **Estadísticas** - Análisis detallado por barrio, ratings, reviews
-- 🔍 **Monitor de Scraping** - Timeline de actividad, top movers, tendencias
-- 💾 **SQL Editor** - Editor con Monaco (VS Code) y queries predefinidas
-- 📋 **Logs** - Historial de operaciones con filtros
-- 🌙 **Dark/Light mode** - Toggle de tema
-- 📱 **Responsive** - Sidebar colapsable
+Actualmente en desarrollo local. El sistema principal está disponible en [quemorfamos.adriandv.dev](https://quemorfamos.adriandv.dev).
 
-## 🚀 Quick Start
+## Características
+
+- **Dashboard Principal** - KPIs principales: lugares, reseñas, ratings promedio
+- **Estadísticas** - Análisis detallado por zona, barrio, categoría y ratings
+- **Monitor de Scraping** - Timeline de actividad, lugares más activos, tendencias
+- **Buscador de Reseñas** - Búsqueda de texto completo en +170k reseñas
+- **SQL Editor** - Editor Monaco (VS Code) con queries predefinidas
+- **Gestión de Lugares** - Vista detallada de cada restaurante con sus reseñas
+- **Mapa Interactivo** - Visualización geográfica con filtros
+- **Dark/Light mode** - Toggle de tema
+- **Responsive** - Sidebar colapsable para móviles
+
+## Contexto del Proyecto
+
+Este desarrollo forma parte de mi portfolio personal, construido para profundizar habilidades en visualización de datos y desarrollo de dashboards. Integra conceptos de:
+
+- Desarrollo de interfaces con Next.js y React
+- Visualización de datos con Recharts
+- Consumo de bases de datos PostgreSQL vía Supabase
+- UX/UI para paneles de administración
+- Mapas interactivos con Leaflet
+
+## Stack Tecnológico
+
+| Componente | Tecnología |
+|------------|------------|
+| Framework | Next.js 15 (App Router) |
+| UI Components | shadcn/ui |
+| Estilos | Tailwind CSS |
+| Gráficos | Recharts |
+| SQL Editor | Monaco Editor |
+| Mapas | Leaflet + React-Leaflet |
+| Base de Datos | Supabase (PostgreSQL) |
+
+## Instalación Local
 
 ```bash
-# 1. Instalar dependencias
+# Clonar el repositorio
+git clone https://github.com/AdrianDVnqn/que-morfamos-dashboard.git
+cd que-morfamos-dashboard
+
+# Instalar dependencias
 npm install
 
-# 2. Configurar variables de entorno
+# Configurar variables de entorno
 cp .env.example .env.local
-# Editar .env.local con tus credenciales de Supabase
+# Editar .env.local con credenciales de Supabase
 
-# 3. Iniciar servidor de desarrollo
+# Iniciar servidor de desarrollo
 npm run dev
 
-# 4. Abrir http://localhost:3000
+# Abrir http://localhost:3000
 ```
 
-## 🔧 Environment Variables
-
-Crear `.env.local` en la raíz del proyecto:
+## Variables de Entorno
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key-aqui
 ```
 
-## 📦 Stack
-
-- **Next.js 16** - App Router + Turbopack
-- **shadcn/ui** - Componentes UI
-- **Tailwind CSS 4** - Estilos
-- **Recharts** - Gráficos
-- **Monaco Editor** - SQL Editor
-- **Supabase** - PostgreSQL
-
-## 🌐 Deploy en Vercel
-
-1. Push a GitHub
-2. Import en [vercel.com](https://vercel.com)
-3. Agregar variables de entorno
-4. Deploy!
-
-## 📁 Structure
+## Estructura del Proyecto
 
 ```
 src/
 ├── app/                 # Pages (App Router)
+│   ├── page.tsx         # Dashboard principal
+│   ├── statistics/      # Estadísticas detalladas
+│   ├── lugares/         # Gestión de lugares
+│   ├── reviews/         # Buscador de reseñas
+│   ├── sql/             # SQL Editor
+│   └── logs/            # Logs de scraping
 ├── components/
 │   ├── ui/              # shadcn components
-│   ├── dashboard/       # Stats & charts
-│   └── ...
+│   ├── dashboard/       # Stats cards, charts
+│   ├── Map/             # Componentes de mapa
+│   └── places/          # Detalles de lugares
 └── lib/
-    └── supabase.ts      # DB client
+    ├── supabase.ts      # Cliente de DB
+    └── reviewAnalyzer.ts # Análisis de texto
 ```
 
-## 📝 License
+## Repositorios Relacionados
 
-MIT
+- **que-morfamos-dashboard** (este repo): Panel de monitoreo
+- **que-morfamos**: Backend API FastAPI
+- **que-morfamos-web**: Frontend React (chatbot)
+- **que-morfamos-scraper**: Pipeline de datos y embeddings
+
+## Disclaimer
+
+Este proyecto fue desarrollado exclusivamente con fines educativos y de aprendizaje personal. No tiene propósitos comerciales ni se obtiene rédito económico de él. El código se comparte públicamente como parte de mi portfolio profesional.
