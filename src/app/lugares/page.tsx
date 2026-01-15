@@ -61,7 +61,7 @@ export default function LugaresPage() {
 
     useEffect(() => {
         if (selectedLugar) {
-            fetchPlaceReviews(selectedLugar.nombre)
+            fetchPlaceReviews(selectedLugar.id)
             setIsSummaryExpanded(false)
         }
     }, [selectedLugar])
@@ -103,15 +103,15 @@ export default function LugaresPage() {
         }
     }
 
-    async function fetchPlaceReviews(nombreRestaurante: string) {
+    async function fetchPlaceReviews(lugarId: number) {
         setReviewsLoading(true)
-        console.log("🔍 Buscando reviews para:", nombreRestaurante)
+        console.log("🔍 Buscando reviews para lugar_id:", lugarId)
         try {
             // Fetch ALL reviews for analytics
             const { data: allData, error: allError } = await supabase
                 .from("reviews")
                 .select("*")
-                .eq("restaurante", nombreRestaurante)
+                .eq("lugar_id", lugarId)
                 .order("fecha_original", { ascending: false })
 
             if (allError) console.error("❌ Error fetching all reviews:", allError)
@@ -127,7 +127,7 @@ export default function LugaresPage() {
             const { data, error } = await supabase
                 .from("reviews")
                 .select("*")
-                .eq("restaurante", nombreRestaurante)
+                .eq("lugar_id", lugarId)
                 .order("fecha_original", { ascending: false })
                 .limit(20)
 

@@ -52,7 +52,7 @@ LIMIT 20`,
         name: "Lugares sin reviews scrapeadas",
         query: `SELECT l.nombre, l.total_reviews_google, l.zona 
 FROM lugares l 
-LEFT JOIN reviews r ON l.nombre = r.restaurante 
+LEFT JOIN reviews r ON l.id = r.lugar_id 
 WHERE r.id IS NULL 
 LIMIT 20`,
     },
