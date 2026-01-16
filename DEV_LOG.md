@@ -29,5 +29,16 @@ Registro de cambios en el frontend de administración (Dashboard Next.js/React).
 - Nuevo tipo `HeatmapPoint` para cálculo de intensidades.
 - UI compacta con grid de 3 columnas para los selectores de modo.
 
+#### 🎬 Toggle 2D/3D en Mapa 3D
+- **Botón flotante animado** en la esquina superior izquierda del mapa 3D con diseño glassmorphism.
+- **Transición suave de cámara** entre vista cenital (2D, pitch=0°) e isométrica (3D, pitch=55°).
+- Usa `FlyToInterpolator` de deck.gl con easing exponencial para animación snappy sin overshoot.
+- **Diseño dinámico:** 
+  - Gradiente violeta/fucsia para modo 3D
+  - Gradiente cyan/azul para modo 2D
+  - Iconos SVG animados (cubo 3D ↔ grid 2D)
+  - Switch indicator deslizante
+- El hint de navegación cambia según el modo activo.
+
 ---
 *Bitácora iniciada automáticamente por Antigravity Agent.*
