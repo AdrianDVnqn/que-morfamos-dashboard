@@ -41,4 +41,24 @@ Registro de cambios en el frontend de administración (Dashboard Next.js/React).
 - El hint de navegación cambia según el modo activo.
 
 ---
+
+## 📅 Sesión: 17 de Enero de 2026
+
+### 📱 Adaptación Mobile
+
+#### 🍔 Menú de Navegación Mobile
+- **SidebarTrigger:** Se agregó el botón hamburguesa en el header principal (`layout.tsx`) para permitir abrir el sidebar en dispositivos móviles.
+- El sidebar ahora se despliega como un drawer/sheet deslizable en pantallas pequeñas.
+- Funciona con el hook `useIsMobile` que detecta viewports < 768px.
+
+#### 📊 Charts Responsivos
+- **ReviewsByZonaChart:** Cambiado de `col-span-2` a `col-span-full md:col-span-2` para ocupar todo el ancho en mobile.
+- **CategoriesChart:** Agregado `col-span-full md:col-span-1` explícito para consistencia.
+- Las StatsCards ya estaban bien configuradas con `md:grid-cols-2 lg:grid-cols-3`.
+
+### 🛠️ Archivos Modificados
+- `src/app/layout.tsx` - Import y uso de SidebarTrigger
+- `src/components/dashboard/charts.tsx` - Clases responsive para col-span
+
+---
 *Bitácora iniciada automáticamente por Antigravity Agent.*

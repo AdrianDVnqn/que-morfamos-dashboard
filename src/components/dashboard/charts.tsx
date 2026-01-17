@@ -89,7 +89,7 @@ export function ReviewsByZonaChart() {
 
     if (loading) {
         return (
-            <Card className="col-span-2">
+            <Card className="col-span-full md:col-span-2">
                 <CardHeader>
                     <CardTitle>Reviews por Zona</CardTitle>
                 </CardHeader>
@@ -103,7 +103,7 @@ export function ReviewsByZonaChart() {
     }
 
     return (
-        <Card className="col-span-2">
+        <Card className="col-span-full md:col-span-2">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     📊 Reviews por Zona
@@ -199,7 +199,7 @@ export function CategoriesChart() {
 
     if (loading) {
         return (
-            <Card>
+            <Card className="col-span-full md:col-span-1">
                 <CardHeader>
                     <CardTitle>Por Categoría</CardTitle>
                 </CardHeader>
@@ -213,7 +213,7 @@ export function CategoriesChart() {
     }
 
     return (
-        <Card>
+        <Card className="col-span-full md:col-span-1">
             <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
                     🥧 Por Categoría

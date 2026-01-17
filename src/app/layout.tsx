@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const geistSans = Geist({
@@ -40,7 +40,8 @@ export default function RootLayout({
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <header className="flex h-14 items-center justify-between border-b px-4 lg:px-6">
+              <header className="flex h-14 items-center gap-4 border-b px-4 lg:px-6">
+                <SidebarTrigger />
                 <div className="flex-1" />
                 <ThemeToggle />
               </header>
