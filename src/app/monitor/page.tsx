@@ -78,7 +78,10 @@ export default function MonitorPage() {
                 }
 
                 // Daily stats -> Weekly stats (last 8 weeks)
-                const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString()
+                // Filter out the massive 360k anomaly from first scraping in Jan 12th
+                const eightWeeksAgoDate = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)
+                const startLimitDate = new Date('2026-01-14T00:00:00Z')
+                const effectiveStartDate = eightWeeksAgoDate > startLimitDate ? eightWeeksAgoDate.toISOString() : startLimitDate.toISOString()
                 
                 // Fetch paginated to bypass 1000 row limit
                 let allDailyData: any[] = []
@@ -90,7 +93,7 @@ export default function MonitorPage() {
                     const { data: dailyData, error } = await supabase
                         .from("review_history")
                         .select("recorded_at, delta_since_last")
-                        .gte("recorded_at", eightWeeksAgo)
+                        .gte("recorded_at", effectiveStartDate)
                         .gt("delta_since_last", 0)
                         .range(dailyPage * DAILY_PAGE_SIZE, (dailyPage + 1) * DAILY_PAGE_SIZE - 1)
 
@@ -124,7 +127,7 @@ export default function MonitorPage() {
                     })
 
                     // Ensure we have 0 for all weeks in the 8-week range
-                    const dStart = new Date(eightWeeksAgo)
+                    const dStart = new Date(effectiveStartDate)
                     const startDay = dStart.getUTCDay()
                     const startDiff = dStart.getUTCDate() - startDay + (startDay === 0 ? -6 : 1)
                     const minDate = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), startDiff))

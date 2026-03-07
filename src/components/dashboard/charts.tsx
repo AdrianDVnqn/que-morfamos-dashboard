@@ -287,7 +287,10 @@ export function ReviewsTimelineChart() {
         async function fetchData() {
             try {
                 // Last 60 days from scraping_logs (sum of nuevas_reviews per week)
-                const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+                // Filter out the massive 360k+ anomaly from first scraping in Jan 12th
+                const sixtyDaysAgoDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
+                const startLimitDate = new Date('2026-01-14T00:00:00Z')
+                const effectiveStartDate = sixtyDaysAgoDate > startLimitDate ? sixtyDaysAgoDate.toISOString() : startLimitDate.toISOString()
 
                 // Fetch paginated to bypass 1000 row limit
                 let allLogs: any[] = []
@@ -299,7 +302,7 @@ export function ReviewsTimelineChart() {
                     const { data: logs, error } = await supabase
                         .from("scraping_logs")
                         .select("fecha, nuevas_reviews")
-                        .gte("fecha", sixtyDaysAgo)
+                        .gte("fecha", effectiveStartDate)
                         .order("fecha", { ascending: true })
                         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -337,7 +340,7 @@ export function ReviewsTimelineChart() {
                     })
 
                     // Ensure we have 0 for all weeks in the 60-day range
-                    const dStart = new Date(sixtyDaysAgo)
+                    const dStart = new Date(effectiveStartDate)
                     const startDay = dStart.getUTCDay()
                     const startDiff = dStart.getUTCDate() - startDay + (startDay === 0 ? -6 : 1)
                     
