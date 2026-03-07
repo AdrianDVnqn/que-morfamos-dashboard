@@ -77,27 +77,53 @@ export default function MonitorPage() {
                     setTopMovers(topMoversData)
                 }
 
-                // Daily stats (last 14 days)
-                const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+                // Daily stats -> Weekly stats (last 8 weeks)
+                const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString()
                 const { data: dailyData } = await supabase
                     .from("review_history")
                     .select("recorded_at, delta_since_last")
-                    .gte("recorded_at", twoWeeksAgo)
+                    .gte("recorded_at", eightWeeksAgo)
                     .gt("delta_since_last", 0)
 
                 if (dailyData) {
-                    const dailyMap = new Map<string, number>()
+                    const weekMap = new Map<string, number>()
+                    
                     dailyData.forEach((d) => {
-                        const date = new Date(d.recorded_at).toLocaleDateString("es-AR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                        })
-                        dailyMap.set(date, (dailyMap.get(date) || 0) + (d.delta_since_last || 0))
+                        const dateObj = new Date(d.recorded_at)
+                        // Get Monday of that week
+                        const day = dateObj.getDay()
+                        const diff = dateObj.getDate() - day + (day === 0 ? -6 : 1)
+                        const monday = new Date(dateObj.setDate(diff))
+                        
+                        // Format as YYYY-MM-DD for sorting properly
+                        const weekKey = monday.toISOString().split('T')[0]
+                        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (d.delta_since_last || 0))
                     })
 
-                    const stats = Array.from(dailyMap.entries())
-                        .map(([date, nuevas]) => ({ date, nuevas }))
-                        .slice(-14)
+                    // Ensure we have 0 for missing weeks between min and max
+                    if (weekMap.size > 0) {
+                        const keys = Array.from(weekMap.keys()).sort()
+                        const minDate = new Date(keys[0])
+                        const maxDate = new Date(keys[keys.length - 1])
+                        
+                        for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 7)) {
+                            const weekKey = d.toISOString().split('T')[0]
+                            if (!weekMap.has(weekKey)) {
+                                weekMap.set(weekKey, 0)
+                            }
+                        }
+                    }
+
+                    const stats = Array.from(weekMap.entries())
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([weekKey, nuevas]) => {
+                            const [year, month, day] = weekKey.split('-')
+                            return {
+                                date: `Sem. ${day}/${month}`,
+                                nuevas
+                            }
+                        })
+                        .slice(-8)
 
                     setDailyStats(stats)
                 }
@@ -143,7 +169,7 @@ export default function MonitorPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <TrendingUp className="h-5 w-5 text-green-500" />
-                        Reviews Nuevas por Día
+                        Reviews Nuevas por Semana
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[250px]">
@@ -158,6 +184,7 @@ export default function MonitorPage() {
                                     borderColor: "hsl(var(--border))",
                                     borderRadius: "0.5rem",
                                 }}
+                                itemStyle={{ color: "hsl(var(--foreground))" }}
                             />
                             <Bar
                                 dataKey="nuevas"

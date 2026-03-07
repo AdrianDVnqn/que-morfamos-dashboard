@@ -18,10 +18,10 @@ import {
 interface DashboardStats {
     totalLugares: number
     totalReviews: number
-    reviews24h: number
+    reviewsSemanal: number
     avgRating: number
     lastScraping: string | null
-    errores24h: number
+    erroresSemanal: number
 }
 
 interface ReviewQuality {
@@ -47,7 +47,7 @@ function isUsefulText(text: string): boolean {
 export function StatsCards() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [reviewQuality, setReviewQuality] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
-    const [reviewQuality24h, setReviewQuality24h] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
+    const [reviewQualitySemanal, setReviewQualitySemanal] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -63,12 +63,12 @@ export function StatsCards() {
                     .from("reviews")
                     .select("*", { count: "exact", head: true })
 
-                // Reviews últimas 24h
-                const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-                const { count: reviews24h } = await supabase
+                // Reviews (Semanal)
+                const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+                const { count: reviewsSemanal } = await supabase
                     .from("reviews")
                     .select("*", { count: "exact", head: true })
-                    .gte("fecha_scraping", yesterday)
+                    .gte("fecha_scraping", lastWeek)
 
                 // Rating promedio
                 const { data: ratingData } = await supabase
@@ -91,20 +91,20 @@ export function StatsCards() {
                     .limit(1)
                     .single()
 
-                // Errores 24h
-                const { count: errores24h } = await supabase
+                // Errores (Semanal)
+                const { count: erroresSemanal } = await supabase
                     .from("scraping_logs")
                     .select("*", { count: "exact", head: true })
                     .eq("estado", "ERROR")
-                    .gte("fecha", yesterday)
+                    .gte("fecha", lastWeek)
 
                 setStats({
                     totalLugares: totalLugares || 0,
                     totalReviews: totalReviews || 0,
-                    reviews24h: reviews24h || 0,
+                    reviewsSemanal: reviewsSemanal || 0,
                     avgRating,
                     lastScraping: lastLog?.fecha || null,
-                    errores24h: errores24h || 0,
+                    erroresSemanal: erroresSemanal || 0,
                 })
 
                 // Fetch review quality stats (sample for performance - last 10k reviews)
@@ -131,26 +131,26 @@ export function StatsCards() {
                     })
                 }
 
-                // Fetch review quality for 24h
-                const { data: reviews24hData } = await supabase
+                // Fetch review quality for weekly
+                const { data: reviewsSemanalData } = await supabase
                     .from("reviews")
                     .select("texto")
-                    .gte("fecha_scraping", yesterday)
+                    .gte("fecha_scraping", lastWeek)
 
-                if (reviews24hData) {
+                if (reviewsSemanalData) {
                     let sinTexto = 0
                     let conTextoUtil = 0
-                    reviews24hData.forEach(r => {
+                    reviewsSemanalData.forEach(r => {
                         if (!r.texto || r.texto.trim() === "") {
                             sinTexto++
                         } else if (isUsefulText(r.texto)) {
                             conTextoUtil++
                         }
                     })
-                    setReviewQuality24h({
+                    setReviewQualitySemanal({
                         sinTexto,
                         conTextoUtil,
-                        total: reviews24hData.length
+                        total: reviewsSemanalData.length
                     })
                 }
 
@@ -184,14 +184,14 @@ export function StatsCards() {
             tooltipContent: reviewQuality,
         },
         {
-            id: "reviews-24h",
-            title: "Reseñas 24h",
-            value: stats?.reviews24h?.toLocaleString() || "0",
+            id: "reviews-semanal",
+            title: "Reseñas (Semanal)",
+            value: stats?.reviewsSemanal?.toLocaleString() || "0",
             icon: TrendingUp,
-            description: "Nuevas hoy",
+            description: "Nuevas esta semana",
             gradient: "from-green-500 to-emerald-500",
             hasTooltip: true,
-            tooltipContent: reviewQuality24h,
+            tooltipContent: reviewQualitySemanal,
         },
         {
             id: "rating",
@@ -215,11 +215,11 @@ export function StatsCards() {
         },
         {
             id: "errores",
-            title: "Errores 24h",
-            value: stats?.errores24h?.toString() || "0",
+            title: "Errores (Semanal)",
+            value: stats?.erroresSemanal?.toString() || "0",
             icon: AlertCircle,
             description: "Fallos de scraping",
-            gradient: stats?.errores24h && stats.errores24h > 0 ? "from-red-500 to-rose-500" : "from-gray-500 to-slate-500",
+            gradient: stats?.erroresSemanal && stats.erroresSemanal > 0 ? "from-red-500 to-rose-500" : "from-gray-500 to-slate-500",
         },
     ]
 

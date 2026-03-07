@@ -57,10 +57,10 @@ WHERE r.id IS NULL
 LIMIT 20`,
     },
     {
-        name: "Actividad scraping últimas 24h",
+        name: "Actividad scraping (semanal)",
         query: `SELECT estado, COUNT(*) as cantidad, SUM(nuevas_reviews) as nuevas_reviews
 FROM scraping_logs 
-WHERE fecha > NOW() - INTERVAL '24 hours'
+WHERE fecha > NOW() - INTERVAL '7 days'
 GROUP BY estado`,
     },
 ]
@@ -167,7 +167,7 @@ Nota: Necesitás crear una función RPC "execute_sql" en Supabase para ejecutar 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">SQL Editor</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Explorador SQL</h1>
                 <p className="text-muted-foreground">
                     Ejecuta consultas SQL directamente en la base de datos
                 </p>

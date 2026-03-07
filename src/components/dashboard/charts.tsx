@@ -141,6 +141,7 @@ export function ReviewsByZonaChart() {
                                     color: "#fff",
                                     boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                                 }}
+                                itemStyle={{ color: "#fff" }}
                                 formatter={(value) => [`${value} reviews`, 'Total']}
                             />
                             <Bar
@@ -250,6 +251,7 @@ export function CategoriesChart() {
                                     color: "#fff",
                                     boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                                 }}
+                                itemStyle={{ color: "#fff" }}
                                 formatter={(value, name) => [
                                     `${value} lugares`,
                                     name as string
@@ -284,27 +286,56 @@ export function ReviewsTimelineChart() {
         setMounted(true)
         async function fetchData() {
             try {
-                // Last 30 days from scraping_logs (sum of nuevas_reviews per day)
-                const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+                // Last 60 days from scraping_logs (sum of nuevas_reviews per week)
+                const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
 
                 const { data: logs, error } = await supabase
                     .from("scraping_logs")
                     .select("fecha, nuevas_reviews")
-                    .gte("fecha", thirtyDaysAgo)
+                    .gte("fecha", sixtyDaysAgo)
                     .order("fecha", { ascending: true })
 
                 if (logs && logs.length > 0) {
-                    // Group by date and sum nuevas_reviews
-                    const dateMap = new Map<string, number>()
+                    // Group by week and sum nuevas_reviews
+                    const weekMap = new Map<string, number>()
+                    
                     logs.forEach((l) => {
                         if (l.fecha) {
-                            const date = new Date(l.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })
-                            dateMap.set(date, (dateMap.get(date) || 0) + (l.nuevas_reviews || 0))
+                            const d = new Date(l.fecha)
+                            // Get Monday of that week
+                            const day = d.getDay()
+                            const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+                            const monday = new Date(d.setDate(diff))
+                            
+                            // Format as YYYY-MM-DD for sorting properly
+                            const weekKey = monday.toISOString().split('T')[0]
+                            weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (l.nuevas_reviews || 0))
                         }
                     })
 
-                    const chartData = Array.from(dateMap.entries())
-                        .map(([date, reviews]) => ({ date, reviews }))
+                    // Ensure we have 0 for missing weeks between min and max
+                    if (weekMap.size > 0) {
+                        const keys = Array.from(weekMap.keys()).sort()
+                        const minDate = new Date(keys[0])
+                        const maxDate = new Date(keys[keys.length - 1])
+                        
+                        for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 7)) {
+                            const weekKey = d.toISOString().split('T')[0]
+                            if (!weekMap.has(weekKey)) {
+                                weekMap.set(weekKey, 0)
+                            }
+                        }
+                    }
+
+                    const chartData = Array.from(weekMap.entries())
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([weekKey, reviews]) => {
+                            const [year, month, day] = weekKey.split('-')
+                            return {
+                                date: `Sem. ${day}/${month}`,
+                                reviews
+                            }
+                        })
 
                     setData(chartData)
                 }
@@ -339,7 +370,7 @@ export function ReviewsTimelineChart() {
         <Card className="col-span-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    📈 Nuevas Reviews (Últimos 30 días)
+                    📈 Nuevas Reviews (Últimos 2 meses)
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -355,6 +386,7 @@ export function ReviewsTimelineChart() {
                                     borderColor: "hsl(var(--border))",
                                     borderRadius: "0.5rem",
                                 }}
+                                itemStyle={{ color: "hsl(var(--foreground))" }}
                             />
                             <Line
                                 type="monotone"

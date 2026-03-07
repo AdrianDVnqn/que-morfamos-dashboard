@@ -55,7 +55,7 @@ const navItems = [
         icon: Activity,
     },
     {
-        title: "SQL Editor",
+        title: "Explorador SQL",
         url: "/sql",
         icon: Database,
     },
