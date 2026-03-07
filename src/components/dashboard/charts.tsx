@@ -302,37 +302,31 @@ export function ReviewsTimelineChart() {
                     logs.forEach((l) => {
                         if (l.fecha) {
                             const d = new Date(l.fecha)
-                            // Get Monday of that week
-                            const day = d.getDay()
-                            const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-                            const monday = new Date(d.setDate(diff))
+                            // We need to group by week using consistent UTC to prevent local timezone shifts
+                            // creating string mismatches.
+                            const day = d.getUTCDay()
+                            const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1)
+                            const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff))
                             
-                            // Format as YYYY-MM-DD in local time for consistent sorting and matching
-                            const year = monday.getFullYear()
-                            const month = String(monday.getMonth() + 1).padStart(2, '0')
-                            const dateDay = String(monday.getDate()).padStart(2, '0')
-                            const weekKey = `${year}-${month}-${dateDay}`
-                            
+                            const weekKey = monday.toISOString().split('T')[0]
                             weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (l.nuevas_reviews || 0))
                         }
                     })
 
                     // Ensure we have 0 for all weeks in the 60-day range
                     const dStart = new Date(sixtyDaysAgo)
-                    const startDay = dStart.getDay()
-                    const startDiff = dStart.getDate() - startDay + (startDay === 0 ? -6 : 1)
-                    const minDate = new Date(dStart.setDate(startDiff))
-                    minDate.setHours(0, 0, 0, 0)
+                    const startDay = dStart.getUTCDay()
+                    const startDiff = dStart.getUTCDate() - startDay + (startDay === 0 ? -6 : 1)
                     
-                    const maxDate = new Date()
-                    maxDate.setHours(0, 0, 0, 0)
+                    const minDate = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), startDiff))                    
                     
-                    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 7)) {
-                        const year = d.getFullYear()
-                        const month = String(d.getMonth() + 1).padStart(2, '0')
-                        const dateDay = String(d.getDate()).padStart(2, '0')
-                        const weekKey = `${year}-${month}-${dateDay}`
-                        
+                    const today = new Date()
+                    const todayDay = today.getUTCDay()
+                    const todayDiff = today.getUTCDate() - todayDay + (todayDay === 0 ? -6 : 1)
+                    const maxDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), todayDiff))
+                    
+                    for (let d = new Date(minDate); d <= maxDate; d.setUTCDate(d.getUTCDate() + 7)) {
+                        const weekKey = d.toISOString().split('T')[0]
                         if (!weekMap.has(weekKey)) {
                             weekMap.set(weekKey, 0)
                         }
