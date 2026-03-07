@@ -91,10 +91,10 @@ export default function MonitorPage() {
 
                 while (dailyHasMore) {
                     const { data: dailyData, error } = await supabase
-                        .from("review_history")
-                        .select("recorded_at, delta_since_last")
-                        .gte("recorded_at", effectiveStartDate)
-                        .gt("delta_since_last", 0)
+                        .from("scraping_logs")
+                        .select("fecha, nuevas_reviews")
+                        .gte("fecha", effectiveStartDate)
+                        .gt("nuevas_reviews", 0)
                         .range(dailyPage * DAILY_PAGE_SIZE, (dailyPage + 1) * DAILY_PAGE_SIZE - 1)
 
                     if (error || !dailyData) {
@@ -116,14 +116,14 @@ export default function MonitorPage() {
                     const weekMap = new Map<string, number>()
                     
                     allDailyData.forEach((d) => {
-                        const dateObj = new Date(d.recorded_at)
+                        const dateObj = new Date(d.fecha)
                         // We need to group by week using consistent UTC to prevent local timezone shifts
                         const day = dateObj.getUTCDay()
                         const diff = dateObj.getUTCDate() - day + (day === 0 ? -6 : 1)
                         const monday = new Date(Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), diff))
                         
                         const weekKey = monday.toISOString().split('T')[0]
-                        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (d.delta_since_last || 0))
+                        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (d.nuevas_reviews || 0))
                     })
 
                     // Ensure we have 0 for all weeks in the 8-week range
@@ -132,7 +132,8 @@ export default function MonitorPage() {
                     const startDiff = dStart.getUTCDate() - startDay + (startDay === 0 ? -6 : 1)
                     const minDate = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), startDiff))
                     
-                    const today = new Date()
+                    const lastDataTime = Math.max(...allDailyData.map(d => new Date(d.fecha).getTime()))
+                    const today = lastDataTime > 0 ? new Date(lastDataTime) : new Date()
                     const todayDay = today.getUTCDay()
                     const todayDiff = today.getUTCDate() - todayDay + (todayDay === 0 ? -6 : 1)
                     const maxDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), todayDiff))

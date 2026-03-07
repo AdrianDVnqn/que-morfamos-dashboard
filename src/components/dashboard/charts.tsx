@@ -346,7 +346,8 @@ export function ReviewsTimelineChart() {
                     
                     const minDate = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), startDiff))                    
                     
-                    const today = new Date()
+                    const lastLogTime = Math.max(...allLogs.map(l => new Date(l.fecha).getTime()))
+                    const today = lastLogTime > 0 ? new Date(lastLogTime) : new Date()
                     const todayDay = today.getUTCDay()
                     const todayDiff = today.getUTCDate() - todayDay + (todayDay === 0 ? -6 : 1)
                     const maxDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), todayDiff))
