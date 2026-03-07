@@ -95,22 +95,33 @@ export default function MonitorPage() {
                         const diff = dateObj.getDate() - day + (day === 0 ? -6 : 1)
                         const monday = new Date(dateObj.setDate(diff))
                         
-                        // Format as YYYY-MM-DD for sorting properly
-                        const weekKey = monday.toISOString().split('T')[0]
+                        // Format as YYYY-MM-DD in local time for consistent sorting and matching
+                        const year = monday.getFullYear()
+                        const month = String(monday.getMonth() + 1).padStart(2, '0')
+                        const dateDay = String(monday.getDate()).padStart(2, '0')
+                        const weekKey = `${year}-${month}-${dateDay}`
+                        
                         weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (d.delta_since_last || 0))
                     })
 
-                    // Ensure we have 0 for missing weeks between min and max
-                    if (weekMap.size > 0) {
-                        const keys = Array.from(weekMap.keys()).sort()
-                        const minDate = new Date(keys[0])
-                        const maxDate = new Date(keys[keys.length - 1])
+                    // Ensure we have 0 for all weeks in the 8-week range
+                    const dStart = new Date(eightWeeksAgo)
+                    const startDay = dStart.getDay()
+                    const startDiff = dStart.getDate() - startDay + (startDay === 0 ? -6 : 1)
+                    const minDate = new Date(dStart.setDate(startDiff))
+                    minDate.setHours(0, 0, 0, 0)
+                    
+                    const maxDate = new Date()
+                    maxDate.setHours(0, 0, 0, 0)
+                    
+                    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 7)) {
+                        const year = d.getFullYear()
+                        const month = String(d.getMonth() + 1).padStart(2, '0')
+                        const dateDay = String(d.getDate()).padStart(2, '0')
+                        const weekKey = `${year}-${month}-${dateDay}`
                         
-                        for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 7)) {
-                            const weekKey = d.toISOString().split('T')[0]
-                            if (!weekMap.has(weekKey)) {
-                                weekMap.set(weekKey, 0)
-                            }
+                        if (!weekMap.has(weekKey)) {
+                            weekMap.set(weekKey, 0)
                         }
                     }
 
