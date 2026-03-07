@@ -289,17 +289,40 @@ export function ReviewsTimelineChart() {
                 // Last 60 days from scraping_logs (sum of nuevas_reviews per week)
                 const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
 
-                const { data: logs, error } = await supabase
-                    .from("scraping_logs")
-                    .select("fecha, nuevas_reviews")
-                    .gte("fecha", sixtyDaysAgo)
-                    .order("fecha", { ascending: true })
+                // Fetch paginated to bypass 1000 row limit
+                let allLogs: any[] = []
+                let page = 0
+                const PAGE_SIZE = 1000
+                let hasMore = true
 
-                if (logs && logs.length > 0) {
+                while (hasMore) {
+                    const { data: logs, error } = await supabase
+                        .from("scraping_logs")
+                        .select("fecha, nuevas_reviews")
+                        .gte("fecha", sixtyDaysAgo)
+                        .order("fecha", { ascending: true })
+                        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+
+                    if (error || !logs) {
+                        hasMore = false
+                        console.error("Error fetching paginated logs:", error)
+                        break
+                    }
+
+                    allLogs = [...allLogs, ...logs]
+                    
+                    if (logs.length < PAGE_SIZE) {
+                        hasMore = false
+                    } else {
+                        page++
+                    }
+                }
+
+                if (allLogs.length > 0) {
                     // Group by week and sum nuevas_reviews
                     const weekMap = new Map<string, number>()
                     
-                    logs.forEach((l) => {
+                    allLogs.forEach((l) => {
                         if (l.fecha) {
                             const d = new Date(l.fecha)
                             // We need to group by week using consistent UTC to prevent local timezone shifts

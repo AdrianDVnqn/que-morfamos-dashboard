@@ -79,16 +79,40 @@ export default function MonitorPage() {
 
                 // Daily stats -> Weekly stats (last 8 weeks)
                 const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString()
-                const { data: dailyData } = await supabase
-                    .from("review_history")
-                    .select("recorded_at, delta_since_last")
-                    .gte("recorded_at", eightWeeksAgo)
-                    .gt("delta_since_last", 0)
+                
+                // Fetch paginated to bypass 1000 row limit
+                let allDailyData: any[] = []
+                let dailyPage = 0
+                const DAILY_PAGE_SIZE = 1000
+                let dailyHasMore = true
 
-                if (dailyData) {
+                while (dailyHasMore) {
+                    const { data: dailyData, error } = await supabase
+                        .from("review_history")
+                        .select("recorded_at, delta_since_last")
+                        .gte("recorded_at", eightWeeksAgo)
+                        .gt("delta_since_last", 0)
+                        .range(dailyPage * DAILY_PAGE_SIZE, (dailyPage + 1) * DAILY_PAGE_SIZE - 1)
+
+                    if (error || !dailyData) {
+                        dailyHasMore = false
+                        console.error("Error fetching paginated daily data:", error)
+                        break
+                    }
+
+                    allDailyData = [...allDailyData, ...dailyData]
+                    
+                    if (dailyData.length < DAILY_PAGE_SIZE) {
+                        dailyHasMore = false
+                    } else {
+                        dailyPage++
+                    }
+                }
+
+                if (allDailyData.length > 0) {
                     const weekMap = new Map<string, number>()
                     
-                    dailyData.forEach((d) => {
+                    allDailyData.forEach((d) => {
                         const dateObj = new Date(d.recorded_at)
                         // We need to group by week using consistent UTC to prevent local timezone shifts
                         const day = dateObj.getUTCDay()
