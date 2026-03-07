@@ -287,9 +287,9 @@ export function ReviewsTimelineChart() {
         async function fetchData() {
             try {
                 // Last 60 days from scraping_logs (sum of nuevas_reviews per week)
-                // Filter out the massive 360k+ anomaly from first scraping in Jan 12th
+                // Filter out the massive anomaly from first scraping in Jan
                 const sixtyDaysAgoDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-                const startLimitDate = new Date('2026-01-14T00:00:00Z')
+                const startLimitDate = new Date('2026-01-20T00:00:00Z')
                 const effectiveStartDate = sixtyDaysAgoDate > startLimitDate ? sixtyDaysAgoDate.toISOString() : startLimitDate.toISOString()
 
                 // Fetch paginated to bypass 1000 row limit
@@ -413,18 +413,23 @@ export function ReviewsTimelineChart() {
                             <YAxis className="text-xs" />
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: "hsl(var(--card))",
-                                    borderColor: "hsl(var(--border))",
-                                    borderRadius: "0.5rem",
+                                    backgroundColor: "rgba(30, 30, 46, 0.95)",
+                                    borderColor: "rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "0.75rem",
+                                    color: "#fff",
+                                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                                 }}
-                                itemStyle={{ color: "hsl(var(--foreground))" }}
+                                itemStyle={{ color: "#8b5cf6", fontWeight: "bold" }}
+                                cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1, strokeDasharray: '3 3' }}
                             />
                             <Line
                                 type="monotone"
                                 dataKey="reviews"
-                                stroke="hsl(var(--chart-2))"
-                                strokeWidth={2}
-                                dot={{ fill: "hsl(var(--chart-2))" }}
+                                stroke="#8b5cf6"
+                                strokeWidth={3}
+                                dot={{ fill: "#1e1e2e", stroke: "#8b5cf6", strokeWidth: 2, r: 4 }}
+                                activeDot={{ r: 6, strokeWidth: 0, fill: "#8b5cf6" }}
+                                animationDuration={1000}
                             />
                         </LineChart>
                     </ResponsiveContainer>

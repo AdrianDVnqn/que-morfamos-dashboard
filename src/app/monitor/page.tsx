@@ -78,9 +78,9 @@ export default function MonitorPage() {
                 }
 
                 // Daily stats -> Weekly stats (last 8 weeks)
-                // Filter out the massive 360k anomaly from first scraping in Jan 12th
+                // Filter out the massive anomaly from first scraping in Jan
                 const eightWeeksAgoDate = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)
-                const startLimitDate = new Date('2026-01-14T00:00:00Z')
+                const startLimitDate = new Date('2026-01-20T00:00:00Z')
                 const effectiveStartDate = eightWeeksAgoDate > startLimitDate ? eightWeeksAgoDate.toISOString() : startLimitDate.toISOString()
                 
                 // Fetch paginated to bypass 1000 row limit
@@ -205,22 +205,32 @@ export default function MonitorPage() {
                 <CardContent className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={dailyStats}>
+                            <defs>
+                                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#06b6d4" stopOpacity={1} />
+                                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.6} />
+                                </linearGradient>
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                             <XAxis dataKey="date" className="text-xs" />
                             <YAxis className="text-xs" />
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: "hsl(var(--card))",
-                                    borderColor: "hsl(var(--border))",
-                                    borderRadius: "0.5rem",
+                                    backgroundColor: "rgba(30, 30, 46, 0.95)",
+                                    borderColor: "rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "0.75rem",
+                                    color: "#fff",
+                                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
                                 }}
-                                itemStyle={{ color: "hsl(var(--foreground))" }}
+                                itemStyle={{ color: "#0ea5e9", fontWeight: "bold" }}
+                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             />
                             <Bar
                                 dataKey="nuevas"
-                                fill="hsl(var(--chart-2))"
-                                radius={[4, 4, 0, 0]}
+                                fill="url(#barGradient)"
+                                radius={[6, 6, 0, 0]}
                                 name="Nuevas reviews"
+                                animationDuration={1000}
                             />
                         </BarChart>
                     </ResponsiveContainer>
