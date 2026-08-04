@@ -14,24 +14,10 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
     AreaChart,
     Area,
 } from "recharts"
 import { BarChart3, MapPin, Star, Users } from "lucide-react"
-
-const COLORS = [
-    "#8b5cf6",
-    "#06b6d4",
-    "#10b981",
-    "#f59e0b",
-    "#ef4444",
-    "#ec4899",
-    "#6366f1",
-    "#14b8a6",
-]
 
 export default function StatisticsPage() {
     const [loading, setLoading] = useState(true)
@@ -171,7 +157,13 @@ export default function StatisticsPage() {
                                     }}
                                     formatter={(value) => [`${value} lugares`, "Cantidad"]}
                                 />
-                                <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+                                <defs>
+                                    <linearGradient id="barrioGradient" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.85} />
+                                        <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={1} />
+                                    </linearGradient>
+                                </defs>
+                                <Bar dataKey="count" fill="url(#barrioGradient)" radius={[0, 4, 4, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -190,11 +182,11 @@ export default function StatisticsPage() {
                             <BarChart data={ratingDist}>
                                 <defs>
                                     <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={1} />
-                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.6} />
+                                        <stop offset="5%" stopColor="var(--chart-4)" stopOpacity={1} />
+                                        <stop offset="95%" stopColor="var(--chart-5)" stopOpacity={0.7} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/70" />
                                 <XAxis dataKey="rating" className="text-xs" angle={-20} textAnchor="end" height={50} />
                                 <YAxis className="text-xs" />
                                 <Tooltip
@@ -226,7 +218,7 @@ export default function StatisticsPage() {
                     <CardContent className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={reviewsPerLugar}>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/70" />
                                 <XAxis dataKey="range" className="text-xs" />
                                 <YAxis className="text-xs" />
                                 <Tooltip
@@ -239,9 +231,10 @@ export default function StatisticsPage() {
                                 <Area
                                     type="monotone"
                                     dataKey="count"
-                                    stroke="hsl(var(--chart-2))"
-                                    fill="hsl(var(--chart-2))"
-                                    fillOpacity={0.3}
+                                    stroke="var(--chart-2)"
+                                    fill="var(--chart-2)"
+                                    fillOpacity={0.25}
+                                    strokeWidth={3}
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -259,7 +252,7 @@ export default function StatisticsPage() {
                     <CardContent className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={topLugares}>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted/70" />
                                 <XAxis
                                     dataKey="nombre"
                                     className="text-xs"
@@ -274,7 +267,13 @@ export default function StatisticsPage() {
                                     }}
                                     labelFormatter={(_, payload) => payload[0]?.payload?.nombre || ""}
                                 />
-                                <Bar dataKey="reviews" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                                <defs>
+                                    <linearGradient id="topReviewsGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="var(--chart-5)" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.85} />
+                                    </linearGradient>
+                                </defs>
+                                <Bar dataKey="reviews" fill="url(#topReviewsGradient)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
