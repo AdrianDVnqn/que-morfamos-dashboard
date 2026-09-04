@@ -88,71 +88,35 @@ export default function SQLEditorPage() {
         const startTime = Date.now()
 
         try {
-            // Use Supabase's RPC or direct query
-            // Note: For security, in production you'd want to validate/sanitize the query
+            // La función execute_sql corre como el visitante (SECURITY INVOKER), así que RLS la
+            // limita a las tablas públicas. Es de sólo lectura y corta a 1000 filas.
             const { data, error: queryError } = await supabase.rpc("execute_sql", {
                 sql_query: query,
             })
 
             if (queryError) {
-                // If RPC doesn't exist, try a direct approach for simple queries
-                // This is a fallback - in production, set up proper RPC
                 throw new Error(queryError.message)
             }
 
+            // Cuando la función rechaza la consulta (no es SELECT, o RLS deniega el acceso)
+            // devuelve un objeto { error, detail } en vez de un array de filas.
+            if (data && !Array.isArray(data) && data.error) {
+                throw new Error(data.error)
+            }
+
             const executionTime = Date.now() - startTime
+            const rows: Record<string, unknown>[] = Array.isArray(data) ? data : []
 
-            if (data && Array.isArray(data) && data.length > 0) {
-                setResult({
-                    columns: Object.keys(data[0]),
-                    rows: data,
-                    rowCount: data.length,
-                    executionTime,
-                })
-            } else {
-                setResult({
-                    columns: [],
-                    rows: [],
-                    rowCount: 0,
-                    executionTime,
-                })
-            }
+            setResult({
+                columns: rows.length > 0 ? Object.keys(rows[0]) : [],
+                rows,
+                rowCount: rows.length,
+                executionTime,
+            })
         } catch (err) {
-            // Try alternative approach using REST API
-            try {
-                const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/execute_sql`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-                        },
-                        body: JSON.stringify({ sql_query: query }),
-                    }
-                )
-
-                if (!response.ok) {
-                    throw new Error(`Query failed: ${err instanceof Error ? err.message : "Unknown error"}`)
-                }
-
-                const data = await response.json()
-                const executionTime = Date.now() - startTime
-
-                setResult({
-                    columns: data.length > 0 ? Object.keys(data[0]) : [],
-                    rows: data,
-                    rowCount: data.length,
-                    executionTime,
-                })
-            } catch {
-                setError(
-                    `Error ejecutando query: ${err instanceof Error ? err.message : "Error desconocido"}. 
-          
-Nota: Necesitás crear una función RPC "execute_sql" en Supabase para ejecutar queries arbitrarias.`
-                )
-            }
+            setError(
+                `Error ejecutando la consulta: ${err instanceof Error ? err.message : "Error desconocido"}`
+            )
         } finally {
             setLoading(false)
         }
@@ -169,7 +133,7 @@ Nota: Necesitás crear una función RPC "execute_sql" en Supabase para ejecutar 
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Explorador SQL</h1>
                 <p className="text-muted-foreground">
-                    Ejecuta consultas SQL directamente en la base de datos
+                    Consultas de sólo lectura (SELECT) sobre las tablas públicas · máximo 1000 filas
                 </p>
             </div>
 
