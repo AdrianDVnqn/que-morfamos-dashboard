@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useState, useMemo } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -59,13 +59,9 @@ export default function PlaceDetailsDialog({
     const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Reset state when dialog opens with new lugar
-    useEffect(() => {
-        if (open && lugar) {
-            setIsSummaryExpanded(false);
-            setActiveTab('overview');
-        }
-    }, [open, lugar]);
+    // El estado arranca limpio para cada lugar porque el padre remonta este componente con
+    // `key={lugar.id}`. Antes se reseteaba desde un efecto, que dispara un render extra y es
+    // justo lo que React desaconseja para "resetear estado cuando cambia una prop".
 
     // Analyze reviews for visualizations - USE ALL REVIEWS
     const analytics = useMemo(() => {
@@ -88,7 +84,7 @@ export default function PlaceDetailsDialog({
                 <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                            <h2 className="text-2xl font-bold truncate">{lugar.nombre}</h2>
+                            <DialogTitle className="text-2xl font-bold truncate">{lugar.nombre}</DialogTitle>
                             <div className="flex items-center gap-2 mt-2 flex-wrap">
                                 <Badge variant="outline" className="text-sm">
                                     {lugar.categoria || 'Gastronomía'}
@@ -199,7 +195,7 @@ export default function PlaceDetailsDialog({
                                                     }`}
                                             >
                                                 <p className="text-sm text-foreground/90 leading-relaxed italic">
-                                                    "{lugar.resumen_reviews}"
+                                                    &ldquo;{lugar.resumen_reviews}&rdquo;
                                                 </p>
                                                 <p
                                                     className={`text-[10px] text-muted-foreground text-right mt-2 transition-opacity duration-500 ${isSummaryExpanded ? 'opacity-100' : 'opacity-0'
@@ -267,8 +263,8 @@ export default function PlaceDetailsDialog({
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {reviews.map((review) => (
-                                            <Card key={review.review_id || Math.random()} className="overflow-hidden">
+                                        {reviews.map((review, i) => (
+                                            <Card key={review.review_id || `review-${i}`} className="overflow-hidden">
                                                 <CardContent className="p-4">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="font-medium text-sm truncate max-w-[400px]" title={review.autor}>

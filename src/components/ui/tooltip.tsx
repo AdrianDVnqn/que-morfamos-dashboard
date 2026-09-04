@@ -50,7 +50,6 @@ function Tooltip({ trigger = "hover", ...props }: TooltipProps) {
   if (trigger === "click") {
     return (
       <TooltipContext.Provider value={{ triggerMode: "click" }}>
-        {/* @ts-ignore Compatibility between Tooltip and Popover props is handled manually */}
         <PopoverPrimitive.Root {...props}>
           {props.children}
         </PopoverPrimitive.Root>
