@@ -31,20 +31,6 @@ interface ReviewQuality {
     total: number
 }
 
-// Normaliza texto eliminando caracteres repetidos consecutivos
-function normalizeText(text: string): string {
-    if (!text) return ""
-    // Reduce caracteres repetidos a máximo 2 (ej: "muuuuuy" -> "muy")
-    return text.replace(/(.)\1{2,}/g, '$1$1').trim()
-}
-
-// Determina si un texto es "útil" para análisis
-function isUsefulText(text: string): boolean {
-    if (!text) return false
-    const normalized = normalizeText(text)
-    return normalized.length >= 30
-}
-
 export function StatsCards() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [reviewQuality, setReviewQuality] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
@@ -55,107 +41,36 @@ export function StatsCards() {
     useEffect(() => {
         async function fetchStats() {
             try {
-                // Total de lugares
-                const { count: totalLugares } = await supabase
-                    .from("lugares")
-                    .select("*", { count: "exact", head: true })
+                // Dos consultas donde antes habia ocho. Las que dolian eran las de calidad: se
+                // traian 10.000 textos de reseñas (800 kB) y los de la semana, solo para contar
+                // cuantos superan los 30 caracteres. Ahora la base devuelve los conteos.
+                const [kpis, calidad] = await Promise.all([
+                    supabase.from("dashboard_kpis").select("*").single(),
+                    supabase.from("dashboard_calidad_reviews").select("*"),
+                ])
 
-                // Total de reviews
-                const { count: totalReviews } = await supabase
-                    .from("reviews")
-                    .select("*", { count: "exact", head: true })
-
-                // Reviews (Semanal)
-                const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-                const { count: reviewsSemanal } = await supabase
-                    .from("reviews")
-                    .select("*", { count: "exact", head: true })
-                    .gte("fecha_scraping", lastWeek)
-
-                // Rating promedio
-                const { data: ratingData } = await supabase
-                    .from("lugares")
-                    .select("rating_gral")
-                    .not("rating_gral", "is", null)
-
-                const avgRating = ratingData && ratingData.length > 0
-                    ? ratingData.reduce((sum, l) => {
-                        const parsed = parseFloat(String(l.rating_gral))
-                        return sum + (isNaN(parsed) ? 0 : parsed)
-                    }, 0) / ratingData.length
-                    : 0
-
-                // Último scraping
-                const { data: lastLog } = await supabase
-                    .from("scraping_logs")
-                    .select("fecha")
-                    .order("fecha", { ascending: false })
-                    .limit(1)
-                    .single()
-
-                // Errores (Semanal)
-                const { count: erroresSemanal } = await supabase
-                    .from("scraping_logs")
-                    .select("*", { count: "exact", head: true })
-                    .eq("estado", "ERROR")
-                    .gte("fecha", lastWeek)
+                if (kpis.error) throw new Error(kpis.error.message)
+                if (calidad.error) throw new Error(calidad.error.message)
 
                 setStats({
-                    totalLugares: totalLugares || 0,
-                    totalReviews: totalReviews || 0,
-                    reviewsSemanal: reviewsSemanal || 0,
-                    avgRating,
-                    lastScraping: lastLog?.fecha || null,
-                    erroresSemanal: erroresSemanal || 0,
+                    totalLugares: kpis.data.total_lugares ?? 0,
+                    totalReviews: kpis.data.total_reviews ?? 0,
+                    reviewsSemanal: kpis.data.reviews_semanal ?? 0,
+                    avgRating: Number(kpis.data.rating_promedio ?? 0),
+                    lastScraping: kpis.data.ultimo_scraping ?? null,
+                    erroresSemanal: kpis.data.errores_semanal ?? 0,
                 })
 
-                // Fetch review quality stats (sample for performance - last 10k reviews)
-                const { data: reviewsForQuality } = await supabase
-                    .from("reviews")
-                    .select("texto")
-                    .order("fecha_scraping", { ascending: false })
-                    .limit(10000)
-
-                if (reviewsForQuality) {
-                    let sinTexto = 0
-                    let conTextoUtil = 0
-                    reviewsForQuality.forEach(r => {
-                        if (!r.texto || r.texto.trim() === "") {
-                            sinTexto++
-                        } else if (isUsefulText(r.texto)) {
-                            conTextoUtil++
-                        }
-                    })
-                    setReviewQuality({
-                        sinTexto,
-                        conTextoUtil,
-                        total: reviewsForQuality.length
-                    })
+                const porAmbito = (ambito: string): ReviewQuality => {
+                    const fila = calidad.data?.find((f) => f.ambito === ambito)
+                    return {
+                        sinTexto: fila?.sin_texto ?? 0,
+                        conTextoUtil: fila?.con_texto_util ?? 0,
+                        total: fila?.total ?? 0,
+                    }
                 }
-
-                // Fetch review quality for weekly
-                const { data: reviewsSemanalData } = await supabase
-                    .from("reviews")
-                    .select("texto")
-                    .gte("fecha_scraping", lastWeek)
-
-                if (reviewsSemanalData) {
-                    let sinTexto = 0
-                    let conTextoUtil = 0
-                    reviewsSemanalData.forEach(r => {
-                        if (!r.texto || r.texto.trim() === "") {
-                            sinTexto++
-                        } else if (isUsefulText(r.texto)) {
-                            conTextoUtil++
-                        }
-                    })
-                    setReviewQualitySemanal({
-                        sinTexto,
-                        conTextoUtil,
-                        total: reviewsSemanalData.length
-                    })
-                }
-
+                setReviewQuality(porAmbito("muestra"))
+                setReviewQualitySemanal(porAmbito("semana"))
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {

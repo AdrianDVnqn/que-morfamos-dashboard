@@ -54,27 +54,17 @@ export function ReviewsByZonaChart() {
         setMounted(true)
         async function fetchData() {
             try {
-                const { data: lugares, error: errorConsulta } = await supabase
-                    .from("lugares")
-                    .select("zona, total_reviews_google")
-                    .not("zona", "is", null)
+                // La vista devuelve la suma por zona ya ordenada: antes se bajaban los 929
+                // lugares para sumarlos en el navegador.
+                const { data: zonas, error: errorConsulta } = await supabase
+                    .from("dashboard_lugares_por_zona")
+                    .select("zona, reviews")
+                    .order("reviews", { ascending: false })
+                    .limit(8)
 
                 if (errorConsulta) throw new Error(errorConsulta.message)
 
-                if (lugares) {
-                    const zonaMap = new Map<string, number>()
-                    lugares.forEach((l) => {
-                        const current = zonaMap.get(l.zona) || 0
-                        zonaMap.set(l.zona, current + (l.total_reviews_google || 0))
-                    })
-
-                    const chartData = Array.from(zonaMap.entries())
-                        .map(([zona, count]) => ({ zona, count }))
-                        .sort((a, b) => b.count - a.count)
-                        .slice(0, 8)
-
-                    setData(chartData)
-                }
+                setData((zonas ?? []).map((z) => ({ zona: z.zona, count: Number(z.reviews) })))
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
@@ -181,27 +171,15 @@ export function CategoriesChart() {
         setMounted(true)
         async function fetchData() {
             try {
-                const { data: lugares, error: errorConsulta } = await supabase
-                    .from("lugares")
-                    .select("categoria")
-                    .not("categoria", "is", null)
+                const { data: categorias, error: errorConsulta } = await supabase
+                    .from("dashboard_lugares_por_categoria")
+                    .select("categoria, lugares")
+                    .order("lugares", { ascending: false })
+                    .limit(6)
 
                 if (errorConsulta) throw new Error(errorConsulta.message)
 
-                if (lugares) {
-                    const catMap = new Map<string, number>()
-                    lugares.forEach((l) => {
-                        const cat = l.categoria || "Sin categoría"
-                        catMap.set(cat, (catMap.get(cat) || 0) + 1)
-                    })
-
-                    const chartData = Array.from(catMap.entries())
-                        .map(([categoria, count]) => ({ categoria, count }))
-                        .sort((a, b) => b.count - a.count)
-                        .slice(0, 6)
-
-                    setData(chartData)
-                }
+                setData((categorias ?? []).map((c) => ({ categoria: c.categoria, count: Number(c.lugares) })))
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
@@ -316,7 +294,7 @@ export function ReviewsTimelineChart() {
         setMounted(true)
         async function fetchData() {
             try {
-                setData(await nuevasReviewsPorSemana({ dias: 60 }))
+                setData(await nuevasReviewsPorSemana({ ultimasSemanas: 9 }))
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {

@@ -79,13 +79,7 @@ export default function MonitorPage() {
                 }
 
                 // Serie semanal de reseñas nuevas (últimas 8 semanas).
-                setDailyStats(
-                    await nuevasReviewsPorSemana({
-                        dias: 56,
-                        soloConNuevas: true,
-                        ultimasSemanas: 8,
-                    })
-                )
+                setDailyStats(await nuevasReviewsPorSemana({ ultimasSemanas: 8 }))
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {

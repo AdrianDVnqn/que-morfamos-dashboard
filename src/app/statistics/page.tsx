@@ -29,70 +29,35 @@ export default function StatisticsPage() {
     useEffect(() => {
         async function fetchStats() {
             try {
-                // Lugares por barrio
-                const { data: lugares } = await supabase
-                    .from("lugares")
-                    .select("barrio, rating_gral, total_reviews_google, nombre")
+                // Cuatro vistas en paralelo. Antes esta pagina bajaba los 929 lugares enteros y
+                // armaba las cuatro distribuciones con JavaScript.
+                const [barrios, ratings, porReviews, top] = await Promise.all([
+                    supabase.from("dashboard_lugares_por_barrio")
+                        .select("barrio, lugares").order("lugares", { ascending: false }).limit(10),
+                    supabase.from("dashboard_distribucion_rating")
+                        .select("etiqueta, lugares").order("orden"),
+                    supabase.from("dashboard_distribucion_reviews")
+                        .select("etiqueta, lugares").order("orden"),
+                    supabase.from("dashboard_top_lugares")
+                        .select("nombre, reviews").order("reviews", { ascending: false }),
+                ])
 
-                if (lugares) {
-                    // Barrio distribution
-                    const barrioMap = new Map<string, number>()
-                    lugares.forEach((l) => {
-                        const barrio = l.barrio || "Sin barrio"
-                        barrioMap.set(barrio, (barrioMap.get(barrio) || 0) + 1)
-                    })
-                    setBarrioData(
-                        Array.from(barrioMap.entries())
-                            .map(([barrio, count]) => ({ barrio, count }))
-                            .sort((a, b) => b.count - a.count)
-                            .slice(0, 10)
-                    )
-
-                    // Rating distribution - by ranges
-                    const ratingRanges = [
-                        { min: 1.0, max: 1.9, label: "1-2 ⭐" },
-                        { min: 2.0, max: 2.9, label: "2-3 ⭐" },
-                        { min: 3.0, max: 3.4, label: "3.0-3.4 ⭐" },
-                        { min: 3.5, max: 3.9, label: "3.5-3.9 ⭐" },
-                        { min: 4.0, max: 4.2, label: "4.0-4.2 ⭐" },
-                        { min: 4.3, max: 4.5, label: "4.3-4.5 ⭐" },
-                        { min: 4.6, max: 4.8, label: "4.6-4.8 ⭐" },
-                        { min: 4.9, max: 5.0, label: "4.9-5.0 ⭐" },
-                    ]
-                    const ratingArray = ratingRanges.map((range) => {
-                        const count = lugares.filter((l) => {
-                            if (l.rating_gral === null || l.rating_gral === undefined) return false
-                            const parsed = parseFloat(String(l.rating_gral))
-                            return !isNaN(parsed) && parsed >= range.min && parsed <= range.max
-                        }).length
-                        return { rating: range.label, count }
-                    })
-                    setRatingDist(ratingArray)
-
-                    // Reviews per lugar distribution
-                    const ranges = [
-                        { min: 0, max: 10, label: "0-10" },
-                        { min: 11, max: 50, label: "11-50" },
-                        { min: 51, max: 100, label: "51-100" },
-                        { min: 101, max: 500, label: "101-500" },
-                        { min: 501, max: Infinity, label: "500+" },
-                    ]
-                    const rangeCounts = ranges.map((r) => ({
-                        range: r.label,
-                        count: lugares.filter(
-                            (l) => l.total_reviews_google >= r.min && l.total_reviews_google <= r.max
-                        ).length,
-                    }))
-                    setReviewsPerLugar(rangeCounts)
-
-                    // Top lugares
-                    setTopLugares(
-                        lugares
-                            .sort((a, b) => (b.total_reviews_google || 0) - (a.total_reviews_google || 0))
-                            .slice(0, 10)
-                            .map((l) => ({ nombre: l.nombre || "", reviews: l.total_reviews_google || 0 }))
-                    )
+                for (const r of [barrios, ratings, porReviews, top]) {
+                    if (r.error) throw new Error(r.error.message)
                 }
+
+                setBarrioData((barrios.data ?? []).map((b) => ({
+                    barrio: b.barrio, count: Number(b.lugares),
+                })))
+                setRatingDist((ratings.data ?? []).map((r) => ({
+                    rating: r.etiqueta, count: Number(r.lugares),
+                })))
+                setReviewsPerLugar((porReviews.data ?? []).map((r) => ({
+                    range: r.etiqueta, count: Number(r.lugares),
+                })))
+                setTopLugares((top.data ?? []).map((l) => ({
+                    nombre: l.nombre ?? "", reviews: Number(l.reviews),
+                })))
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
