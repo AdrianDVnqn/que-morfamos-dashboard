@@ -61,4 +61,67 @@ Registro de cambios en el frontend de administración (Dashboard Next.js/React).
 - `src/components/dashboard/charts.tsx` - Clases responsive para col-span
 
 ---
-*Bitácora iniciada automáticamente por Antigravity Agent.*
+
+## 📅 Sesión: 4 de Septiembre de 2026
+
+Auditoría del dashboard antes de publicarlo. Se revisó qué queda expuesto cuando la página deja
+de ser local, y se corrigió lo que encontró la revisión.
+
+### 🔐 Seguridad: `execute_sql` permitía leer toda la base
+
+El hallazgo bloqueante. El Explorador SQL llama a una función de Postgres con la `anon key`, que
+es **pública** (va embebida en el bundle). Esa función tenía dos defectos que juntos la volvían
+una fuga de datos:
+
+1. `SECURITY DEFINER` → corría como `postgres`, así que **el RLS no aplicaba por esa vía**.
+2. Se defendía con un `LIKE 'SELECT%'` y un regex de palabras prohibidas, que **no impide leer**:
+   `SELECT email FROM auth.users` pasaba los dos filtros sin problema.
+
+Cualquier visitante anónimo podía leer `auth.users` o `vault.secrets` desde las devtools.
+
+**El arreglo no es filtrar mejor el SQL** —ese es un juego que se pierde— sino sacar el
+`SECURITY DEFINER`: la función pasa a correr como el rol que la invoca (`anon`), y entonces la
+seguridad la da el motor. `anon` no tiene GRANT sobre esas tablas, así que el intento falla con
+*permission denied* aunque la consulta sea válida. Se sumó `statement_timeout` de 5s, `search_path`
+fijo y un techo de 1000 filas.
+
+El script quedó en el backend (`fix_execute_sql_readonly.sql`), al lado del hardening de grants.
+
+**Verificado desde el navegador**, que es donde importa: lee `lugares`/`reviews`, rechaza los
+no-SELECT, corta 205k filas a 1000, y `query_logs` devuelve *permission denied*.
+
+### ♻️ La serie semanal estaba duplicada
+
+El gráfico de reseñas por semana existía **dos veces**: en el dashboard y en el monitor. Unas 60
+líneas copiadas de paginado, agrupado por lunes en UTC y relleno de semanas vacías. El costo está
+en el propio historial: el bug de timezone y el del padding se arreglaron dos veces, uno por copia.
+
+Ahora vive en `src/lib/scrapingStats.ts`. La fecha de corte —que estaba hardcodeada en los dos
+lados sin explicación— quedó documentada con el dato que la justifica: **el 10-ene-2026 se cargó
+la base entera de una vez, 80.528 reseñas en un día contra ~1.500 de una semana normal**, y
+graficar ese pico aplasta la escala del resto.
+
+### 🎨 Lo que faltaba para que se vea profesional
+
+- **Errores visibles.** Las vistas se tragaban los fetch fallidos con un `console.error` y dejaban
+  el panel en blanco: no se distinguía "no hay datos" de "se rompió". Ahora se muestran.
+- **Tipos que mentían.** `Review` declaraba un `id: number` inexistente (la clave es `review_id`,
+  un texto). El mismo error estaba en una consulta predefinida del explorador SQL, que por eso
+  fallaba siempre. Se verificaron las cuatro interfaces contra `information_schema`.
+- **Título por ruta.** Las nueve páginas se llamaban igual; con varias pestañas abiertas eran
+  indistinguibles. Se agregó un template y metadata de OpenGraph.
+- **Logs de depuración fuera.** Uno corría en cada re-render del mapa, serializando propiedades a
+  JSON para tirarlas a consola.
+- **`force-dynamic` fuera.** Son client components que traen sus datos con `useEffect`: sólo
+  renunciaban al prerender estático sin cambiar lo que se sirve. El build confirma que siguen
+  estáticas.
+- **README.** Decía "actualmente en desarrollo local" y publicitaba el editor SQL sin aclarar que
+  es de sólo lectura. Se sumó una sección sobre el modelo de acceso a los datos.
+
+Balance: **50 líneas menos** de código, con más funcionalidad.
+
+### 📌 Pendiente detectado, no resuelto
+
+El warning `width(-1) and height(-1)` de Recharts **sigue apareciendo** en consola, pese a estar
+anotado como resuelto en la sesión del 14-ene. No rompe nada visible, pero conviene mirarlo con
+tiempo en vez de darlo por cerrado.
