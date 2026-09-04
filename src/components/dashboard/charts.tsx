@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
+import { nuevasReviewsPorSemana, type SemanaDeReviews } from "@/lib/scrapingStats"
+import { ErrorDeCarga } from "@/components/error-de-carga"
 import {
     BarChart,
     Bar,
@@ -41,25 +43,23 @@ interface CategoryData {
     [key: string]: string | number
 }
 
-interface HistoryData {
-    date: string
-    reviews: number
-    [key: string]: string | number
-}
 
 export function ReviewsByZonaChart() {
     const [data, setData] = useState<ZonaData[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
         setMounted(true)
         async function fetchData() {
             try {
-                const { data: lugares } = await supabase
+                const { data: lugares, error: errorConsulta } = await supabase
                     .from("lugares")
                     .select("zona, total_reviews_google")
                     .not("zona", "is", null)
+
+                if (errorConsulta) throw new Error(errorConsulta.message)
 
                 if (lugares) {
                     const zonaMap = new Map<string, number>()
@@ -75,8 +75,8 @@ export function ReviewsByZonaChart() {
 
                     setData(chartData)
                 }
-            } catch (error) {
-                console.error("Error fetching zona data:", error)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
                 setLoading(false)
             }
@@ -86,6 +86,19 @@ export function ReviewsByZonaChart() {
     }, [])
 
     if (!mounted) return null
+
+    if (error) {
+        return (
+            <Card className="col-span-full md:col-span-2">
+                <CardHeader>
+                    <CardTitle>Reviews por Zona</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ErrorDeCarga mensaje={error} />
+                </CardContent>
+            </Card>
+        )
+    }
 
     if (loading) {
         return (
@@ -161,16 +174,19 @@ export function ReviewsByZonaChart() {
 export function CategoriesChart() {
     const [data, setData] = useState<CategoryData[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
         setMounted(true)
         async function fetchData() {
             try {
-                const { data: lugares } = await supabase
+                const { data: lugares, error: errorConsulta } = await supabase
                     .from("lugares")
                     .select("categoria")
                     .not("categoria", "is", null)
+
+                if (errorConsulta) throw new Error(errorConsulta.message)
 
                 if (lugares) {
                     const catMap = new Map<string, number>()
@@ -186,8 +202,8 @@ export function CategoriesChart() {
 
                     setData(chartData)
                 }
-            } catch (error) {
-                console.error("Error fetching category data:", error)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
                 setLoading(false)
             }
@@ -197,6 +213,19 @@ export function CategoriesChart() {
     }, [])
 
     if (!mounted) return null
+
+    if (error) {
+        return (
+            <Card className="col-span-full md:col-span-1">
+                <CardHeader>
+                    <CardTitle>Por Categoría</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ErrorDeCarga mensaje={error} />
+                </CardContent>
+            </Card>
+        )
+    }
 
     if (loading) {
         return (
@@ -278,101 +307,18 @@ export function CategoriesChart() {
 }
 
 export function ReviewsTimelineChart() {
-    const [data, setData] = useState<HistoryData[]>([])
+    const [data, setData] = useState<SemanaDeReviews[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
         setMounted(true)
         async function fetchData() {
             try {
-                // Last 60 days from scraping_logs (sum of nuevas_reviews per week)
-                // Filter out the massive anomaly from first scraping in Jan
-                const sixtyDaysAgoDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-                const startLimitDate = new Date('2026-01-20T00:00:00Z')
-                const effectiveStartDate = sixtyDaysAgoDate > startLimitDate ? sixtyDaysAgoDate.toISOString() : startLimitDate.toISOString()
-
-                // Fetch paginated to bypass 1000 row limit
-                let allLogs: any[] = []
-                let page = 0
-                const PAGE_SIZE = 1000
-                let hasMore = true
-
-                while (hasMore) {
-                    const { data: logs, error } = await supabase
-                        .from("scraping_logs")
-                        .select("fecha, nuevas_reviews")
-                        .gte("fecha", effectiveStartDate)
-                        .order("fecha", { ascending: true })
-                        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-
-                    if (error || !logs) {
-                        hasMore = false
-                        console.error("Error fetching paginated logs:", error)
-                        break
-                    }
-
-                    allLogs = [...allLogs, ...logs]
-                    
-                    if (logs.length < PAGE_SIZE) {
-                        hasMore = false
-                    } else {
-                        page++
-                    }
-                }
-
-                if (allLogs.length > 0) {
-                    // Group by week and sum nuevas_reviews
-                    const weekMap = new Map<string, number>()
-                    
-                    allLogs.forEach((l) => {
-                        if (l.fecha) {
-                            const d = new Date(l.fecha)
-                            // We need to group by week using consistent UTC to prevent local timezone shifts
-                            // creating string mismatches.
-                            const day = d.getUTCDay()
-                            const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1)
-                            const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff))
-                            
-                            const weekKey = monday.toISOString().split('T')[0]
-                            weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (l.nuevas_reviews || 0))
-                        }
-                    })
-
-                    // Ensure we have 0 for all weeks in the 60-day range
-                    const dStart = new Date(effectiveStartDate)
-                    const startDay = dStart.getUTCDay()
-                    const startDiff = dStart.getUTCDate() - startDay + (startDay === 0 ? -6 : 1)
-                    
-                    const minDate = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), startDiff))                    
-                    
-                    const lastLogTime = Math.max(...allLogs.map(l => new Date(l.fecha).getTime()))
-                    const today = lastLogTime > 0 ? new Date(lastLogTime) : new Date()
-                    const todayDay = today.getUTCDay()
-                    const todayDiff = today.getUTCDate() - todayDay + (todayDay === 0 ? -6 : 1)
-                    const maxDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), todayDiff))
-                    
-                    for (let d = new Date(minDate); d <= maxDate; d.setUTCDate(d.getUTCDate() + 7)) {
-                        const weekKey = d.toISOString().split('T')[0]
-                        if (!weekMap.has(weekKey)) {
-                            weekMap.set(weekKey, 0)
-                        }
-                    }
-
-                    const chartData = Array.from(weekMap.entries())
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([weekKey, reviews]) => {
-                            const [year, month, day] = weekKey.split('-')
-                            return {
-                                date: `Sem. ${day}/${month}`,
-                                reviews
-                            }
-                        })
-
-                    setData(chartData)
-                }
-            } catch (error) {
-                console.error("Error fetching timeline:", error)
+                setData(await nuevasReviewsPorSemana({ dias: 60 }))
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
                 setLoading(false)
             }
@@ -382,6 +328,19 @@ export function ReviewsTimelineChart() {
     }, [])
 
     if (!mounted) return null
+
+    if (error) {
+        return (
+            <Card className="col-span-full">
+                <CardHeader>
+                    <CardTitle>Evolución de Reviews</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ErrorDeCarga mensaje={error} />
+                </CardContent>
+            </Card>
+        )
+    }
 
     if (loading) {
         return (
@@ -425,7 +384,7 @@ export function ReviewsTimelineChart() {
                             />
                             <Line
                                 type="monotone"
-                                dataKey="reviews"
+                                dataKey="nuevas"
                                 stroke="#8b5cf6"
                                 strokeWidth={3}
                                 dot={{ fill: "#1e1e2e", stroke: "#8b5cf6", strokeWidth: 2, r: 4 }}

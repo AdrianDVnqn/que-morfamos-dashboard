@@ -1,16 +1,14 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { supabase, type ReviewHistory } from "@/lib/supabase"
+import { nuevasReviewsPorSemana } from "@/lib/scrapingStats"
+import { ErrorDeCarga } from "@/components/error-de-carga"
 import {
-    LineChart,
-    Line,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -32,16 +30,19 @@ export default function MonitorPage() {
     const [topMovers, setTopMovers] = useState<TopMover[]>([])
     const [dailyStats, setDailyStats] = useState<{ date: string; nuevas: number }[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         async function fetchData() {
             try {
                 // Recent activity (last 50 entries)
-                const { data: activity } = await supabase
+                const { data: activity, error: errorActividad } = await supabase
                     .from("review_history")
                     .select("*")
                     .order("recorded_at", { ascending: false })
                     .limit(50)
+
+                if (errorActividad) throw new Error(errorActividad.message)
 
                 if (activity) {
                     setRecentActivity(activity)
@@ -77,89 +78,16 @@ export default function MonitorPage() {
                     setTopMovers(topMoversData)
                 }
 
-                // Daily stats -> Weekly stats (last 8 weeks)
-                // Filter out the massive anomaly from first scraping in Jan
-                const eightWeeksAgoDate = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)
-                const startLimitDate = new Date('2026-01-20T00:00:00Z')
-                const effectiveStartDate = eightWeeksAgoDate > startLimitDate ? eightWeeksAgoDate.toISOString() : startLimitDate.toISOString()
-                
-                // Fetch paginated to bypass 1000 row limit
-                let allDailyData: any[] = []
-                let dailyPage = 0
-                const DAILY_PAGE_SIZE = 1000
-                let dailyHasMore = true
-
-                while (dailyHasMore) {
-                    const { data: dailyData, error } = await supabase
-                        .from("scraping_logs")
-                        .select("fecha, nuevas_reviews")
-                        .gte("fecha", effectiveStartDate)
-                        .gt("nuevas_reviews", 0)
-                        .range(dailyPage * DAILY_PAGE_SIZE, (dailyPage + 1) * DAILY_PAGE_SIZE - 1)
-
-                    if (error || !dailyData) {
-                        dailyHasMore = false
-                        console.error("Error fetching paginated daily data:", error)
-                        break
-                    }
-
-                    allDailyData = [...allDailyData, ...dailyData]
-                    
-                    if (dailyData.length < DAILY_PAGE_SIZE) {
-                        dailyHasMore = false
-                    } else {
-                        dailyPage++
-                    }
-                }
-
-                if (allDailyData.length > 0) {
-                    const weekMap = new Map<string, number>()
-                    
-                    allDailyData.forEach((d) => {
-                        const dateObj = new Date(d.fecha)
-                        // We need to group by week using consistent UTC to prevent local timezone shifts
-                        const day = dateObj.getUTCDay()
-                        const diff = dateObj.getUTCDate() - day + (day === 0 ? -6 : 1)
-                        const monday = new Date(Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), diff))
-                        
-                        const weekKey = monday.toISOString().split('T')[0]
-                        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + (d.nuevas_reviews || 0))
+                // Serie semanal de reseñas nuevas (últimas 8 semanas).
+                setDailyStats(
+                    await nuevasReviewsPorSemana({
+                        dias: 56,
+                        soloConNuevas: true,
+                        ultimasSemanas: 8,
                     })
-
-                    // Ensure we have 0 for all weeks in the 8-week range
-                    const dStart = new Date(effectiveStartDate)
-                    const startDay = dStart.getUTCDay()
-                    const startDiff = dStart.getUTCDate() - startDay + (startDay === 0 ? -6 : 1)
-                    const minDate = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), startDiff))
-                    
-                    const lastDataTime = Math.max(...allDailyData.map(d => new Date(d.fecha).getTime()))
-                    const today = lastDataTime > 0 ? new Date(lastDataTime) : new Date()
-                    const todayDay = today.getUTCDay()
-                    const todayDiff = today.getUTCDate() - todayDay + (todayDay === 0 ? -6 : 1)
-                    const maxDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), todayDiff))
-                    
-                    for (let d = new Date(minDate); d <= maxDate; d.setUTCDate(d.getUTCDate() + 7)) {
-                        const weekKey = d.toISOString().split('T')[0]
-                        if (!weekMap.has(weekKey)) {
-                            weekMap.set(weekKey, 0)
-                        }
-                    }
-
-                    const stats = Array.from(weekMap.entries())
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([weekKey, nuevas]) => {
-                            const [year, month, day] = weekKey.split('-')
-                            return {
-                                date: `Sem. ${day}/${month}`,
-                                nuevas
-                            }
-                        })
-                        .slice(-8)
-
-                    setDailyStats(stats)
-                }
-            } catch (error) {
-                console.error("Error fetching monitor data:", error)
+                )
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
                 setLoading(false)
             }
@@ -170,6 +98,18 @@ export default function MonitorPage() {
         const interval = setInterval(fetchData, 5 * 60 * 1000)
         return () => clearInterval(interval)
     }, [])
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Monitor de Scraping</h1>
+                    <p className="text-muted-foreground">Seguimiento de actividad y nuevas reseñas</p>
+                </div>
+                <ErrorDeCarga mensaje={error} />
+            </div>
+        )
+    }
 
     if (loading) {
         return (

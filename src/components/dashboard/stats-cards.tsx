@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { supabase } from "@/lib/supabase"
+import { ErrorDeCarga } from "@/components/error-de-carga"
 import {
     Utensils,
     MessageSquare,
@@ -49,6 +50,7 @@ export function StatsCards() {
     const [reviewQuality, setReviewQuality] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
     const [reviewQualitySemanal, setReviewQualitySemanal] = useState<ReviewQuality>({ sinTexto: 0, conTextoUtil: 0, total: 0 })
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         async function fetchStats() {
@@ -154,8 +156,8 @@ export function StatsCards() {
                     })
                 }
 
-            } catch (error) {
-                console.error("Error fetching stats:", error)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
                 setLoading(false)
             }
@@ -222,6 +224,10 @@ export function StatsCards() {
             gradient: stats?.erroresSemanal && stats.erroresSemanal > 0 ? "from-red-500 to-rose-500" : "from-gray-500 to-slate-500",
         },
     ]
+
+    if (error) {
+        return <ErrorDeCarga mensaje={error} />
+    }
 
     if (loading) {
         return (

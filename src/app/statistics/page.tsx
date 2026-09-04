@@ -1,11 +1,10 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
+import { ErrorDeCarga } from "@/components/error-de-carga"
 import {
     BarChart,
     Bar,
@@ -21,6 +20,7 @@ import { BarChart3, MapPin, Star, Users } from "lucide-react"
 
 export default function StatisticsPage() {
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [barrioData, setBarrioData] = useState<{ barrio: string; count: number }[]>([])
     const [ratingDist, setRatingDist] = useState<{ rating: string; count: number }[]>([])
     const [reviewsPerLugar, setReviewsPerLugar] = useState<{ range: string; count: number }[]>([])
@@ -93,8 +93,8 @@ export default function StatisticsPage() {
                             .map((l) => ({ nombre: l.nombre || "", reviews: l.total_reviews_google || 0 }))
                     )
                 }
-            } catch (error) {
-                console.error("Error fetching statistics:", error)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido")
             } finally {
                 setLoading(false)
             }
@@ -102,6 +102,10 @@ export default function StatisticsPage() {
 
         fetchStats()
     }, [])
+
+    if (error) {
+        return <ErrorDeCarga mensaje={error} />
+    }
 
     if (loading) {
         return (

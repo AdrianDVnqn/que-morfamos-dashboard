@@ -1,7 +1,5 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +16,7 @@ import {
 } from "@/components/ui/table"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { supabase, type ScrapingLog } from "@/lib/supabase"
+import { ErrorDeCarga } from "@/components/error-de-carga"
 import { FileText, Search, RefreshCw, Filter } from "lucide-react"
 import {
     DropdownMenu,
@@ -53,6 +52,7 @@ function extractPlaceName(url: string | null): string {
 export default function LogsPage() {
     const [logs, setLogs] = useState<ScrapingLog[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [filter, setFilter] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [stats, setStats] = useState<{ estado: string; count: number }[]>([])
@@ -115,7 +115,7 @@ export default function LogsPage() {
                 )
             }
         } catch (error) {
-            console.error("Error fetching logs:", error)
+            setError(error instanceof Error ? error.message : "Error desconocido")
         } finally {
             setLoading(false)
         }
@@ -133,6 +133,20 @@ export default function LogsPage() {
             log.url?.toLowerCase().includes(search.toLowerCase()) ||
             log.mensaje?.toLowerCase().includes(search.toLowerCase())
     )
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Logs de Scraping</h1>
+                    <p className="text-muted-foreground">
+                        Historial de operaciones de scraping
+                    </p>
+                </div>
+                <ErrorDeCarga mensaje={error} />
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
