@@ -17,8 +17,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Qué Morfamos - Dashboard",
-  description: "Dashboard de estadísticas y monitoreo de restaurantes",
+  // El template hace que cada ruta aporte su propio título (lo define su layout) y que la
+  // pestaña sea distinguible: antes las nueve páginas se llamaban igual.
+  title: {
+    template: "%s · Qué Morfamos",
+    default: "Dashboard · Qué Morfamos",
+  },
+  description:
+    "Panel de monitoreo y análisis del relevamiento gastronómico de Neuquén: 929 locales y más de 200.000 reseñas.",
+  openGraph: {
+    title: "Qué Morfamos · Dashboard",
+    description:
+      "Panel de monitoreo y análisis del relevamiento gastronómico de Neuquén: 929 locales y más de 200.000 reseñas.",
+    type: "website",
+    locale: "es_AR",
+  },
 };
 
 export default function RootLayout({

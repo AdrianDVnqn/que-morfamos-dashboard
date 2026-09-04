@@ -4,7 +4,7 @@ Panel de monitoreo y análisis para el sistema de recomendaciones gastronómicas
 
 ## Demo en Vivo
 
-Actualmente en desarrollo local. El sistema principal está disponible en [quemorfamos.adriandv.dev](https://quemorfamos.adriandv.dev).
+El sistema principal está disponible en [quemorfamos.adriandv.dev](https://quemorfamos.adriandv.dev).
 
 ## Características
 
@@ -12,11 +12,26 @@ Actualmente en desarrollo local. El sistema principal está disponible en [quemo
 - **Estadísticas** - Análisis detallado por zona, barrio, categoría y ratings
 - **Monitor de Scraping** - Timeline de actividad, lugares más activos, tendencias
 - **Buscador de Reseñas** - Búsqueda de texto completo en +170k reseñas
-- **SQL Editor** - Editor Monaco (VS Code) con queries predefinidas
+- **Explorador SQL** - Editor Monaco (VS Code) con consultas predefinidas, de sólo lectura
 - **Gestión de Lugares** - Vista detallada de cada restaurante con sus reseñas
 - **Mapa Interactivo** - Visualización geográfica con filtros
 - **Dark/Light mode** - Toggle de tema
 - **Responsive** - Sidebar colapsable para móviles
+
+## Modelo de Acceso a los Datos
+
+El dashboard es de sólo lectura y consulta Supabase directamente desde el cliente con la
+`anon key`, que es pública por diseño. Lo que define qué se puede ver no es el frontend, sino la
+base:
+
+- **RLS activo** en todas las tablas expuestas, con políticas de sólo lectura.
+- **Sin permisos de escritura** para el rol anónimo: `INSERT`, `UPDATE` y `DELETE` están revocados.
+- **El Explorador SQL corre como el visitante** (`SECURITY INVOKER`), no como el dueño de la base:
+  las mismas reglas de RLS que protegen al resto lo contienen a él. Además tiene timeout de 5s y
+  un techo de 1000 filas por consulta.
+
+Los datos expuestos son reseñas públicas de Google Maps; no hay información personal de usuarios
+del sistema.
 
 ## Contexto del Proyecto
 
@@ -76,7 +91,7 @@ src/
 │   ├── statistics/      # Estadísticas detalladas
 │   ├── lugares/         # Gestión de lugares
 │   ├── reviews/         # Buscador de reseñas
-│   ├── sql/             # SQL Editor
+│   ├── sql/             # Explorador SQL (sólo lectura)
 │   └── logs/            # Logs de scraping
 ├── components/
 │   ├── ui/              # shadcn components
@@ -84,7 +99,8 @@ src/
 │   ├── Map/             # Componentes de mapa
 │   └── places/          # Detalles de lugares
 └── lib/
-    ├── supabase.ts      # Cliente de DB
+    ├── supabase.ts       # Cliente de DB y tipos del esquema
+    ├── scrapingStats.ts  # Series temporales del pipeline (agregado semanal)
     └── reviewAnalyzer.ts # Análisis de texto
 ```
 
