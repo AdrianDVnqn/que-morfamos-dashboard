@@ -65,7 +65,6 @@ export default function ReviewsPage() {
     async function searchReviews() {
         setLoading(true)
         try {
-            console.log("🔍 Buscando reviews text:", debouncedSearch, "place:", debouncedPlace)
 
             let query = supabase
                 .from("reviews")

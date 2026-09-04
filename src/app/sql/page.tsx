@@ -1,7 +1,5 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
 import { useState } from "react"
 import Editor from "@monaco-editor/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,7 +51,7 @@ LIMIT 20`,
         query: `SELECT l.nombre, l.total_reviews_google, l.zona 
 FROM lugares l 
 LEFT JOIN reviews r ON l.id = r.lugar_id 
-WHERE r.id IS NULL 
+WHERE r.review_id IS NULL 
 LIMIT 20`,
     },
     {

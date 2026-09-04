@@ -65,7 +65,7 @@ const navItems = [
         icon: MapIcon,
     },
     {
-        title: "🧪 Mapa 3D",
+        title: "Mapa 3D",
         url: "/mapa-3d",
         icon: MapIcon,
     },

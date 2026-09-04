@@ -105,7 +105,6 @@ export default function LugaresPage() {
 
     async function fetchPlaceReviews(lugarId: number) {
         setReviewsLoading(true)
-        console.log("🔍 Buscando reviews para lugar_id:", lugarId)
         try {
             // Fetch ALL reviews for analytics
             const { data: allData, error: allError } = await supabase
@@ -118,7 +117,6 @@ export default function LugaresPage() {
 
             if (allData) {
                 setAllPlaceReviews(allData)
-                console.log("📊 Total reviews para análisis:", allData.length)
             } else {
                 setAllPlaceReviews([])
             }
@@ -131,7 +129,6 @@ export default function LugaresPage() {
                 .order("fecha_original", { ascending: false })
                 .limit(20)
 
-            console.log("📄 Últimas reviews para mostrar:", data?.length)
             if (error) console.error("❌ Error Supabase:", error)
 
             if (data) {

@@ -266,7 +266,6 @@ export default function RestaurantMap() {
             if (filters.ratingRanges.length > 0) {
                 const rating = typeof p.rating_gral === 'string' ? parseFloat(p.rating_gral) : p.rating_gral;
                 if (!checkRating(rating || 0, filters.ratingRanges)) {
-                    // console.log(`[Filter] Rejected ${p.restaurante} because rating ${rating} not in ${filters.ratingRanges}`);
                     return false;
                 }
             }
@@ -279,7 +278,6 @@ export default function RestaurantMap() {
             return true;
         });
 
-        console.log(`[Filter] Places Count: ${features.length} / ${data.features.length}`);
         return { ...data, features };
     }
 
@@ -297,13 +295,6 @@ export default function RestaurantMap() {
 
             return true;
         });
-
-        // Debug Log
-        console.log(`Filtering Barrios: 
-            Zones Filter: ${JSON.stringify(filters.zones)}
-            Features Count: ${features.length}
-            Sample Feature: ${features.length > 0 ? JSON.stringify(features[0].properties) : 'None'}
-        `);
 
         return { ...data, features };
     }
