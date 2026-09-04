@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ErrorDeCarga } from "@/components/error-de-carga"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, MessageSquare, Calendar, User, Star, MapPin, Store } from "lucide-react"
+import { Search, Calendar, User, Store } from "lucide-react"
 import {
     Table,
     TableBody,
@@ -29,6 +29,7 @@ interface ReviewSearchResult {
 export default function ReviewsPage() {
     const [reviews, setReviews] = useState<ReviewSearchResult[]>([])
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [placeFilter, setPlaceFilter] = useState("")
 
@@ -53,16 +54,7 @@ export default function ReviewsPage() {
         return () => clearTimeout(timer)
     }, [placeFilter])
 
-    // Trigger search when debounced values change
-    useEffect(() => {
-        if (debouncedSearch.length >= 3 || (debouncedPlace.length >= 3 && debouncedSearch.length > 0)) {
-            searchReviews()
-        } else if (debouncedSearch.length === 0 && debouncedPlace.length === 0) {
-            setReviews([])
-        }
-    }, [debouncedSearch, debouncedPlace])
-
-    async function searchReviews() {
+    const searchReviews = useCallback(async () => {
         setLoading(true)
         try {
 
@@ -80,23 +72,27 @@ export default function ReviewsPage() {
                 query = query.ilike("restaurante", `%${debouncedPlace}%`)
             }
 
-            const { data, error } = await query
+            const { data, error: errorConsulta } = await query
 
-            if (error) {
-                console.error("❌ Error Supabase:", error)
-            }
+            if (errorConsulta) throw new Error(errorConsulta.message)
 
-            if (data) {
-                setReviews(data)
-            } else {
-                setReviews([])
-            }
-        } catch (error) {
-            console.error("❌ Error fetching reviews:", error)
+            setReviews(data ?? [])
+            setError(null)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error desconocido")
         } finally {
             setLoading(false)
         }
-    }
+    }, [debouncedSearch, debouncedPlace, limit])
+
+    // Trigger search when debounced values change
+    useEffect(() => {
+        if (debouncedSearch.length >= 3 || (debouncedPlace.length >= 3 && debouncedSearch.length > 0)) {
+            searchReviews()
+        } else if (debouncedSearch.length === 0 && debouncedPlace.length === 0) {
+            setReviews([])
+        }
+    }, [debouncedSearch, debouncedPlace, searchReviews])
 
     return (
         <div className="space-y-6">
@@ -155,6 +151,7 @@ export default function ReviewsPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {error && <ErrorDeCarga mensaje={error} />}
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>

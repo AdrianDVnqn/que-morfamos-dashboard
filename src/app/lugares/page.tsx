@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { Search, MapPin, Star, Utensils, Globe, TrendingUp, Users, ChevronDown, ChevronUp } from "lucide-react"
+import { Search } from "lucide-react"
 import {
     Table,
     TableBody,
@@ -16,8 +15,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Separator } from "@/components/ui/separator"
 import PlaceDetailsDialog from "@/components/places/PlaceDetailsDialog"
+import { ErrorDeCarga } from "@/components/error-de-carga"
 
 interface Lugar {
     id: number
@@ -44,6 +43,7 @@ interface Review {
 export default function LugaresPage() {
     const [lugares, setLugares] = useState<Lugar[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [page, setPage] = useState(1)
     const [pageSize] = useState(50)
@@ -53,20 +53,14 @@ export default function LugaresPage() {
     const [placeReviews, setPlaceReviews] = useState<Review[]>([])
     const [allPlaceReviews, setAllPlaceReviews] = useState<Review[]>([])
     const [reviewsLoading, setReviewsLoading] = useState(false)
-    const [isSummaryExpanded, setIsSummaryExpanded] = useState(false)
-
-    useEffect(() => {
-        fetchLugares()
-    }, [page, search])
 
     useEffect(() => {
         if (selectedLugar) {
             fetchPlaceReviews(selectedLugar.id)
-            setIsSummaryExpanded(false)
         }
     }, [selectedLugar])
 
-    async function fetchLugares() {
+    const fetchLugares = useCallback(async () => {
         setLoading(true)
         try {
             // Count query
@@ -97,11 +91,15 @@ export default function LugaresPage() {
                 setLugares(data)
             }
         } catch (error) {
-            console.error("Error fetching lugares:", error)
+            setError(error instanceof Error ? error.message : "Error desconocido")
         } finally {
             setLoading(false)
         }
-    }
+    }, [page, search, pageSize])
+
+    useEffect(() => {
+        fetchLugares()
+    }, [fetchLugares])
 
     async function fetchPlaceReviews(lugarId: number) {
         setReviewsLoading(true)
@@ -146,6 +144,20 @@ export default function LugaresPage() {
     }
 
     const totalPages = Math.ceil(totalCount / pageSize)
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight">Explorador de Lugares</h2>
+                    <p className="text-muted-foreground">
+                        Gestioná y analizá los restaurantes registrados en la base de datos.
+                    </p>
+                </div>
+                <ErrorDeCarga mensaje={error} />
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -261,6 +273,7 @@ export default function LugaresPage() {
 
             {/* Place Details Dialog (Fullscreen) */}
             <PlaceDetailsDialog
+                key={selectedLugar?.id}
                 lugar={selectedLugar}
                 reviews={placeReviews}
                 allReviews={allPlaceReviews}

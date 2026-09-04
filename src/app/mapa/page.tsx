@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { useMemo } from 'react';
 
 // Dynamically import the Map component to avoid SSR issues with Leaflet
 const RestaurantMap = dynamic(

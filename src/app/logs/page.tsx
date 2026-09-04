@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,7 +62,7 @@ export default function LogsPage() {
     const [pageSize, setPageSize] = useState(50)
     const [totalCount, setTotalCount] = useState(0)
 
-    async function fetchLogs() {
+    const fetchLogs = useCallback(async () => {
         setLoading(true)
         try {
             // Get total count first
@@ -119,11 +119,11 @@ export default function LogsPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [filter, page, pageSize])
 
     useEffect(() => {
         fetchLogs()
-    }, [filter, page, pageSize])
+    }, [fetchLogs])
 
     const totalPages = Math.ceil(totalCount / pageSize)
 
