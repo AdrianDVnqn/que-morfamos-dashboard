@@ -120,6 +120,41 @@ graficar ese pico aplasta la escala del resto.
 
 Balance: **50 líneas menos** de código, con más funcionalidad.
 
+### 🧹 Segunda pasada: de 68 problemas de lint a 0
+
+El repo arrastraba **68 problemas de ESLint (39 de ellos errores)**. En un proyecto de portfolio
+—donde el código es parte de lo que se muestra— eso pesa. Quedó en **cero**, y en el camino
+aparecieron cinco defectos reales que el ruido tenía tapados:
+
+1. **`key={review.review_id || Math.random()}`** en la lista de reseñas. Cuando una reseña no
+   traía id, la key cambiaba en **cada render**: React desmontaba y volvía a montar la tarjeta en
+   vez de reutilizarla.
+2. **El diálogo de detalle no tenía `DialogTitle`.** Radix lo reportaba como error de
+   accesibilidad: los lectores de pantalla no anunciaban de qué lugar era la ficha. El `<h2>` con
+   el nombre ya estaba; sólo había que declararlo como el título.
+3. **`fetchLugares` no escuchaba `pageSize`**, así que cambiar el tamaño de página no volvía a
+   pedir los datos. Apareció recién al declarar las dependencias reales de los efectos.
+4. **El `useMemo` de las capas del mapa 3D leía `minValues` sin declararlo.** Hoy no se manifiesta
+   —sale del mismo memo que `maxValues` y cambian juntos— pero el propio código ya lo declaraba en
+   `updateTriggers`, o sea que la dependencia estaba reconocida en un lado y no en el otro.
+5. **El tamaño de celda del mapa 3D mostraba "0m" para todo el rango.** `cellSize` está en grados
+   y se convertía con factor 111, pero un grado son ~111 **km**: `0.003 * 111 = 0.33` → `0`. El
+   mismo archivo ya usaba el factor correcto para el radio de las columnas.
+
+**El grueso de los `any` estaba en el mapa** (30 de los 39 errores). Ahora hay tipos GeoJSON
+reales en `src/lib/mapTypes.ts`. Tiparlo destapó que las columnas nullables (`zona`, `barrio`,
+`categoria`) se comparaban contra los filtros sin contemplar el `null`, y que `MapFilters` accedía
+a los filtros con `(filters as any)[key]` —justo donde la verificación hacía falta—. De paso:
+**`Map3D` creaba su propio cliente de Supabase** en lugar de usar el compartido.
+
+También se eliminó un `@ts-ignore` que no suprimía ningún error: se notó al convertirlo a
+`@ts-expect-error`, que es exactamente para lo que sirve esa regla.
+
+Verificado en el navegador, porque tocar hooks es riesgoso: **0 pedidos a Supabase en reposo**
+(sin bucles por el `useCallback`), 1 por búsqueda, la paginación de logs sigue refrescando, el
+mapa dibuja sus 929 marcadores y 50 barrios, y el diálogo resetea su estado al cambiar de lugar
+—ahora por remontado con `key` en vez de un efecto, como recomienda React—.
+
 ### 📌 Pendiente detectado, no resuelto
 
 El warning `width(-1) and height(-1)` de Recharts **sigue apareciendo** en consola, pese a estar
