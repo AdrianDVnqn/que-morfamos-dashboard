@@ -155,6 +155,48 @@ Verificado en el navegador, porque tocar hooks es riesgoso: **0 pedidos a Supaba
 mapa dibuja sus 929 marcadores y 50 barrios, y el diálogo resetea su estado al cambiar de lugar
 —ahora por remontado con `key` en vez de un efecto, como recomienda React—.
 
+### 📉 Los agregados se mudaron a la base: 1,6 MB → 2 kB por visita
+
+El dashboard calculaba sus números en el **navegador**: bajaba las filas crudas y las sumaba con
+JavaScript. Medido sobre la home, contando los bytes del JSON que efectivamente viaja:
+
+| | antes | ahora |
+|---|---|---|
+| bytes | **1.619.341** | **2.089** |
+| consultas | 6 (+7 páginas extra de logs) | 5 |
+
+**Una reducción del 99,9 % — 775 veces menos.** Con el panel publicado, ese costo se pagaba entero
+en cada visita.
+
+Lo que dominaba eran dos cosas:
+- **980 kB de textos de reseñas** (las 10.000 más recientes) que se bajaban *sólo para contar
+  cuántas superan los 30 caracteres*.
+- **452 kB de `scraping_logs`**, en ocho peticiones paginadas, para agrupar por semana a mano.
+
+Ahora hay nueve vistas `dashboard_*` en la base (`vistas_dashboard.sql`, en el repo del backend),
+todas con `security_invoker` para que queden sujetas al mismo RLS que las tablas base — la misma
+decisión que se tomó al contener `execute_sql`.
+
+**No son materializadas, y eso se midió antes de decidir.** Descontando la latencia de red, estos
+agregados casi no cuestan cómputo: los `GROUP BY` sobre `lugares` (929 filas) no llegan a 1 ms.
+Lo caro nunca fue calcular, era **transferir**. Una vista normal elimina toda esa transferencia y
+además no necesita `REFRESH` ni un cron: está siempre fresca. Materializar sería pagar
+mantenimiento por milisegundos.
+
+Dos cosas que sólo aparecieron midiendo, y que quedaron escritas en el SQL:
+
+1. **La primera versión de la vista de calidad tardaba 10 segundos.** Juntaba las filas de las dos
+   ramas en una CTE y agrupaba al final; el planner reevaluaba en vez de resolver cada mitad por
+   su lado. Agregando cada rama por separado: 0,5 s.
+2. **No se replicó el `normalizeText()` del front.** Su regexp necesita un backreference
+   (`(.){2,}`), que obliga al motor a backtrackear: ~1,5 ms por texto. Medido, **cambia el
+   veredicto en 6 de cada 10.000 reseñas (0,06 %) y cuesta 8,6 s contra 0,3 s**. Pagar 30x el
+   tiempo para corregir 6 casos —sobre un indicador que ya es una muestra de 10.000 de 205.492—
+   no se justifica. El número mostrado difiere ~0,1 % del anterior.
+
+El front perdió 223 líneas. Verificado en el navegador que los KPIs, los gráficos de zona y
+categoría, las cuatro distribuciones y la serie semanal dan exactamente lo mismo que antes.
+
 ### 📌 Pendiente detectado, no resuelto
 
 El warning `width(-1) and height(-1)` de Recharts **sigue apareciendo** en consola, pese a estar
