@@ -6,45 +6,34 @@ import HeatmapLayer, { HeatmapPoint } from "./HeatmapLayer";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-import iconRetina from "leaflet/dist/images/marker-icon-2x.png";
-import iconMarker from "leaflet/dist/images/marker-icon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
 
 // Fix Leaflet icon issue
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-// Define specific icon with fallback for properties
-const customIcon = new L.Icon({
-    iconUrl: iconMarker.src || iconMarker.toString(),
-    iconRetinaUrl: iconRetina.src || iconRetina.toString(),
-    shadowUrl: iconShadow.src || iconShadow.toString(),
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
+delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
 
 // Use shared client
 import { supabase } from "@/lib/supabase";
-import { ZONAS_MAP, ZONE_COLORS, getZone } from "@/data/zones";
+import { ZONE_COLORS, getZone } from "@/data/zones";
 import { convertGeoJSONCoordinates } from '@/lib/geoUtils';
 import { createCategoryIcon } from '@/lib/categoryIcons';
 
 import MapFilters from "./MapFilters";
+import type { Feature, Geometry } from "geojson";
+import type {
+    BarrioFeature,
+    BarriosGeoJSON,
+    FiltrosMapa,
+    PropiedadesBarrio,
+    LugarFeature,
+    LugaresGeoJSON,
+} from "@/lib/mapTypes";
 
 export default function RestaurantMap() {
-    const [barrios, setBarrios] = useState<any>(null);
-    const [lugares, setLugares] = useState<any>(null);
+    const [barrios, setBarrios] = useState<BarriosGeoJSON | null>(null);
+    const [lugares, setLugares] = useState<LugaresGeoJSON | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Filters State (Multi-select arrays)
-    const [filters, setFilters] = useState<{
-        zones: string[];
-        barrios: string[];
-        categories: string[];
-        ratingRanges: string[];
-        reviewRange: number[]; // [min, max]
-    }>({
+    const [filters, setFilters] = useState<FiltrosMapa>({
         zones: [],
         barrios: [],
         categories: [],
@@ -75,7 +64,7 @@ export default function RestaurantMap() {
             .then(data => {
                 // Enforce tagging with normalization
                 if (data.features) {
-                    data.features = data.features.map((f: any) => {
+                    data.features = data.features.map((f: BarrioFeature) => {
                         // Convert coordinates from Web Mercator to WGS84
                         convertGeoJSONCoordinates(f.geometry);
 
@@ -109,11 +98,11 @@ export default function RestaurantMap() {
                 }
 
                 // Convert to GeoJSON format for consistency
-                const features: any[] = [];
+                const features: LugarFeature[] = [];
                 const zonesSet = new Set<string>();
                 const categoriesSet = new Set<string>();
 
-                data.forEach((l: any) => {
+                data.forEach((l) => {
                     if (l.zona) zonesSet.add(l.zona);
                     if (l.categoria) categoriesSet.add(l.categoria);
 
@@ -147,7 +136,7 @@ export default function RestaurantMap() {
                 }));
 
                 // Calculate max reviews from data for the slider
-                const calculatedMaxReviews = Math.max(...data.map((l: any) => l.total_reviews_google || 0), 100);
+                const calculatedMaxReviews = Math.max(...data.map((l) => l.total_reviews_google || 0), 100);
                 setMaxReviews(calculatedMaxReviews);
 
                 // Update default range only if it hasn't been touched (simple check: if it equals the default wide 50k range)
@@ -158,9 +147,9 @@ export default function RestaurantMap() {
                     return prev;
                 });
 
-            } catch (err: any) {
+            } catch (err) {
                 console.error("Error fetching lugares from Supabase:", err);
-                setError(`Falló carga de Lugares: ${err.message || JSON.stringify(err)}`);
+                setError(`Falló carga de Lugares: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
             }
         };
 
@@ -171,8 +160,8 @@ export default function RestaurantMap() {
     useEffect(() => {
         if (!barrios) return;
 
-        let availableBarrios = new Set<string>();
-        barrios.features.forEach((f: any) => {
+        const availableBarrios = new Set<string>();
+        barrios.features.forEach((f) => {
             // If no zone selected, all barrios valid. 
             // If zones selected, barrio must be in one of them.
             if (filters.zones.length === 0 || filters.zones.includes(f.properties.zona)) {
@@ -186,7 +175,7 @@ export default function RestaurantMap() {
         }));
     }, [barrios, filters.zones]);
 
-    const handleFilterChange = (key: string, value: any) => {
+    const handleFilterChange = (key: keyof FiltrosMapa, value: string[] | number[]) => {
         setFilters(prev => {
             const newFilters = { ...prev, [key]: value };
             // Optional: reset child filters if parent changes? 
@@ -209,7 +198,7 @@ export default function RestaurantMap() {
     const filteredBarrios = barriosFilter(barrios, filters);
 
     // Compute heatmap points from filtered lugares
-    const heatPoints: HeatmapPoint[] = filteredLugares?.features?.map((f: any) => {
+    const heatPoints: HeatmapPoint[] = filteredLugares?.features?.map((f) => {
         const [lon, lat] = f.geometry.coordinates;
         const reviews = f.properties.total_reviews_google || 0;
         const rating = typeof f.properties.rating_gral === 'string'
@@ -244,24 +233,24 @@ export default function RestaurantMap() {
         });
     }
 
-    function placesFilter(data: any, filters: any) {
+    function placesFilter(data: LugaresGeoJSON | null, filters: FiltrosMapa): LugaresGeoJSON | null {
         if (!data) return null;
-        const features = data.features.filter((f: any) => {
+        const features = data.features.filter((f) => {
             const p = f.properties;
 
-            if (filters.zones.length > 0 && !filters.zones.includes(p.zona)) return false;
+            if (filters.zones.length > 0 && !filters.zones.includes(p.zona ?? "")) return false;
 
             // Note: 'barrio' in places might differ from shapefile names. 
             // Relaxing mismatch logic or relying on zone is safer.
             // But if user specificly picks a barrio, we try to match.
-            if (filters.barrios.length > 0 && !filters.barrios.includes(p.barrio)) {
+            if (filters.barrios.length > 0 && !filters.barrios.includes(p.barrio ?? "")) {
                 // Try fuzzy match? Or just strict? Strict for now.
                 // If data.barrio is "Don Bosco II" and filter is "Don Bosco II", it works.
                 // If data.barrio is null, skip.
                 return false;
             }
 
-            if (filters.categories.length > 0 && !filters.categories.includes(p.categoria)) return false;
+            if (filters.categories.length > 0 && !filters.categories.includes(p.categoria ?? "")) return false;
 
             if (filters.ratingRanges.length > 0) {
                 const rating = typeof p.rating_gral === 'string' ? parseFloat(p.rating_gral) : p.rating_gral;
@@ -281,9 +270,9 @@ export default function RestaurantMap() {
         return { ...data, features };
     }
 
-    function barriosFilter(data: any, filters: any) {
+    function barriosFilter(data: BarriosGeoJSON | null, filters: FiltrosMapa): BarriosGeoJSON | null {
         if (!data) return null;
-        const features = data.features.filter((f: any) => {
+        const features = data.features.filter((f) => {
             const p = f.properties;
 
             // Logic: Show barrios if they belong to selected zones.
@@ -299,9 +288,9 @@ export default function RestaurantMap() {
         return { ...data, features };
     }
 
-    const styleBarrios = (feature: any) => {
+    const styleBarrios = (feature?: Feature<Geometry, PropiedadesBarrio>) => {
         return {
-            fillColor: ZONE_COLORS[feature.properties.zona] || '#9ca3af',
+            fillColor: (feature && ZONE_COLORS[feature.properties.zona]) || '#9ca3af',
             weight: 2, // Increased weight for visibility
             opacity: 1,
             color: 'white',
@@ -310,7 +299,7 @@ export default function RestaurantMap() {
         };
     };
 
-    const onEachBarrio = (feature: any, layer: any) => {
+    const onEachBarrio = (feature: Feature<Geometry, PropiedadesBarrio>, layer: L.Layer) => {
         layer.bindPopup(`<b>${feature.properties.NOMBRE}</b><br/>${feature.properties.zona}`);
     };
 
@@ -374,17 +363,23 @@ export default function RestaurantMap() {
 
                 <LayersControl position="topright">
                     <LayersControl.Overlay checked name="Barrios y Zonas">
-                        <GeoJSON
-                            data={filteredBarrios}
-                            style={styleBarrios}
-                            onEachFeature={onEachBarrio}
-                            key={`geo-json-${filters.zones.join('-')}-${filters.barrios.join('-')}`} // Force re-render on filter change
-                        />
+                        <LayerGroup>
+                            {/* La capa se monta recién cuando hay geometrías: el componente GeoJSON
+                                no acepta `data` nulo mientras el shapefile todavía está cargando. */}
+                            {filteredBarrios && (
+                                <GeoJSON
+                                    data={filteredBarrios}
+                                    style={styleBarrios}
+                                    onEachFeature={onEachBarrio}
+                                    key={`geo-json-${filters.zones.join('-')}-${filters.barrios.join('-')}`} // Force re-render on filter change
+                                />
+                            )}
+                        </LayerGroup>
                     </LayersControl.Overlay>
 
                     <LayersControl.Overlay checked name="Restaurantes">
                         <LayerGroup>
-                            {filteredLugares?.features?.map((lugar: any, idx: number) => {
+                            {filteredLugares?.features?.map((lugar, idx: number) => {
                                 const [lon, lat] = lugar.geometry.coordinates;
                                 const categoryIcon = createCategoryIcon(lugar.properties.categoria || '');
                                 return (

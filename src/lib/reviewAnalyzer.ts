@@ -90,10 +90,12 @@ function cleanText(text: string): string {
         .trim();
 }
 
-function categorizeKeyword(keyword: string): 'food' | 'service' | 'ambiance' | 'price' | 'time' | 'other' {
+type CategoriaKeyword = 'food' | 'service' | 'ambiance' | 'price' | 'time' | 'other';
+
+function categorizeKeyword(keyword: string): CategoriaKeyword {
     for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
         if (keywords.includes(keyword)) {
-            return category as any;
+            return category as CategoriaKeyword;
         }
     }
     return 'other';
@@ -138,7 +140,7 @@ export function analyzeReviews(reviews: Review[]): {
 
     // Filter words that appear at least twice
     const filteredWords = Array.from(wordFrequency.entries())
-        .filter(([_, data]) => data.count >= 2)
+        .filter(([, data]) => data.count >= 2)
         .sort((a, b) => b[1].count - a[1].count);
 
     // Generate Word Cloud data

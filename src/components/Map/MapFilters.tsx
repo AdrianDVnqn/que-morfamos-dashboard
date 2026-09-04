@@ -1,8 +1,10 @@
-import { Card } from "@/components/ui/card";
+import type { FiltrosMapa } from "@/lib/mapTypes";
+import {
+    Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { X, Filter, ChevronDown, Check, Flame } from "lucide-react";
+import { X, Filter, ChevronDown, Flame } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -23,7 +25,7 @@ interface MapFiltersProps {
         ratingRanges: string[];
         reviewRange: number[];
     };
-    onFilterChange: (key: string, value: any) => void;
+    onFilterChange: (key: keyof FiltrosMapa, value: string[] | number[]) => void;
     onReset: () => void;
     maxReviews: number;
     // Heatmap controls
@@ -57,8 +59,8 @@ export default function MapFilters({
     onHeatmapModeChange
 }: MapFiltersProps) {
 
-    const toggleFilter = (key: string, item: string) => {
-        const current = (filters as any)[key] as string[];
+    const toggleFilter = (key: keyof FiltrosMapa, item: string) => {
+        const current = filters[key] as string[];
         if (current.includes(item)) {
             onFilterChange(key, current.filter(i => i !== item));
         } else {
@@ -66,8 +68,8 @@ export default function MapFilters({
         }
     };
 
-    const renderMultiSelect = (label: string, key: string, items: string[], placeholder: string) => {
-        const selected = (filters as any)[key] as string[];
+    const renderMultiSelect = (label: string, key: keyof FiltrosMapa, items: string[], placeholder: string) => {
+        const selected = filters[key] as string[];
         return (
             <div className="space-y-1.5">
                 <label className="text-xs text-zinc-400 font-medium">{label}</label>

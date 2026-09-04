@@ -7,6 +7,9 @@ interface Word {
     value: number;
 }
 
+/** Palabra ya posicionada por d3-cloud (agrega coordenadas, giro y tamaño). */
+type PalabraUbicada = cloud.Word & { text: string; size: number; value: number };
+
 interface WordCloudProps {
     words: Word[];
 }
@@ -70,7 +73,7 @@ export default function WordCloud({ words }: WordCloudProps) {
 
         layout.start();
 
-        function draw(words: any[]) {
+        function draw(words: PalabraUbicada[]) {
             if (!containerRef.current) return;
 
             const svg = d3.select(containerRef.current)

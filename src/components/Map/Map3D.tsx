@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { FlyToInterpolator } from "@deck.gl/core";
+import type { Layer, MapViewState } from "@deck.gl/core";
 import DeckGL from "@deck.gl/react";
 import { ColumnLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { Map } from "react-map-gl/maplibre";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 import "maplibre-gl/dist/maplibre-gl.css";
-
-// Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Vista inicial centrada en Neuquén Capital
 const INITIAL_VIEW_STATE = {
@@ -25,6 +21,15 @@ const INITIAL_VIEW_STATE = {
 
 // Tipos de visualización
 type ViewMode = 'density' | 'reviews' | 'rating';
+
+/** Fila cruda de `lugares` tal como la devuelve el select de este componente. */
+interface FilaLugar {
+    nombre: string | null;
+    latitud: number | string | null;
+    longitud: number | string | null;
+    rating_gral: number | string | null;
+    total_reviews_google: number | null;
+}
 
 interface RestaurantPoint {
     longitude: number;
@@ -104,7 +109,7 @@ export default function Map3D() {
     const [cellSize, setCellSize] = useState(0.003);
     const [elevation, setElevation] = useState(3000);
     const [showPoints, setShowPoints] = useState(false);
-    const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+    const [viewState, setViewState] = useState<MapViewState>(INITIAL_VIEW_STATE);
     const [is3DMode, setIs3DMode] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -120,9 +125,9 @@ export default function Map3D() {
 
                 if (error) throw error;
 
-                const points: RestaurantPoint[] = lugares.map((l: any) => ({
-                    longitude: parseFloat(l.longitud),
-                    latitude: parseFloat(l.latitud),
+                const points: RestaurantPoint[] = (lugares as FilaLugar[]).map((l) => ({
+                    longitude: parseFloat(String(l.longitud)),
+                    latitude: parseFloat(String(l.latitud)),
                     reviews: l.total_reviews_google || 0,
                     rating: typeof l.rating_gral === 'string' ? parseFloat(l.rating_gral) : (l.rating_gral || 0),
                     name: l.nombre || "Sin nombre"
@@ -130,8 +135,8 @@ export default function Map3D() {
 
                 setRawData(points);
                 setLoading(false);
-            } catch (err: any) {
-                setError(err.message);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Error desconocido");
                 setLoading(false);
             }
         }
@@ -232,7 +237,7 @@ export default function Map3D() {
             }
         });
 
-        const result: any[] = [columnLayer];
+        const result: Layer[] = [columnLayer];
 
         // Capa de puntos opcional
         if (showPoints) {
@@ -256,11 +261,7 @@ export default function Map3D() {
         }
 
         return result;
-    }, [gridData, rawData, viewMode, cellSize, elevation, showPoints, maxValues]);
-
-    const handleViewStateChange = useCallback(({ viewState }: any) => {
-        setViewState(viewState);
-    }, []);
+    }, [gridData, rawData, viewMode, cellSize, elevation, showPoints, maxValues, minValues]);
 
     // Toggle entre vista 2D y 3D con animación snappy
     const toggle3DView = useCallback(() => {
@@ -268,7 +269,7 @@ export default function Map3D() {
         const newIs3D = !is3DMode;
         setIs3DMode(newIs3D);
 
-        setViewState((prev: typeof INITIAL_VIEW_STATE) => ({
+        setViewState((prev) => ({
             ...prev,
             pitch: newIs3D ? 55 : 0,
             bearing: newIs3D ? -20 : 0,
@@ -311,13 +312,15 @@ export default function Map3D() {
             {/* Mapa 3D */}
             <DeckGL
                 viewState={viewState}
-                onViewStateChange={handleViewStateChange}
+                // deck.gl declara el viewState como `TransitionProps | MapViewState` porque el
+                // callback es comun a todos sus tipos de vista; con un MapView siempre es lo segundo.
+                onViewStateChange={({ viewState }) => setViewState(viewState as MapViewState)}
                 controller={{
                     dragRotate: true,
                     touchRotate: true
                 }}
                 layers={layers}
-                getTooltip={({ object }: any) => {
+                getTooltip={({ object }: { object?: GridCell & RestaurantPoint }) => {
                     if (!object) return null;
                     // Tooltip para ColumnLayer
                     if (object.count !== undefined) {
@@ -490,7 +493,9 @@ export default function Map3D() {
 
                 <div>
                     <label className="text-xs text-zinc-400 block mb-1">
-                        Tamaño de celda: {(cellSize * 111).toFixed(0)}m
+                        {/* cellSize está en grados: un grado son ~111 km, no ~111 m. Con el
+                            factor viejo el rango entero (0.001–0.01) redondeaba a "0m". */}
+                        Tamaño de celda: {(cellSize * 111000).toFixed(0)}m
                     </label>
                     <input
                         type="range"

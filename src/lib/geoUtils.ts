@@ -1,3 +1,4 @@
+import type { Geometry } from "geojson";
 
 export const webMercatorToWGS84 = (x: number, y: number): [number, number] => {
     const rMajor = 6378137.0; // Equatorial Radius, WGS84
@@ -8,7 +9,13 @@ export const webMercatorToWGS84 = (x: number, y: number): [number, number] => {
     return [lon, lat];
 };
 
-export const convertGeoJSONCoordinates = (geometry: any): any => {
+/**
+ * Reproyecta en el lugar las coordenadas de una geometría de Web Mercator a WGS84.
+ *
+ * El shapefile municipal viene en Web Mercator y Leaflet espera lat/lon, así que sin esto los
+ * barrios caen en medio del Atlántico.
+ */
+export const convertGeoJSONCoordinates = (geometry: Geometry | null): Geometry | null => {
     if (!geometry) return null;
 
     const convertRing = (ring: number[][]) => {
@@ -18,9 +25,7 @@ export const convertGeoJSONCoordinates = (geometry: any): any => {
     if (geometry.type === 'Polygon') {
         geometry.coordinates = geometry.coordinates.map(convertRing);
     } else if (geometry.type === 'MultiPolygon') {
-        geometry.coordinates = geometry.coordinates.map((polygon: number[][][]) => {
-            return polygon.map(convertRing);
-        });
+        geometry.coordinates = geometry.coordinates.map((polygon) => polygon.map(convertRing));
     }
 
     return geometry;
