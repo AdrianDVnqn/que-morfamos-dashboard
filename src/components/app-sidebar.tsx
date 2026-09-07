@@ -13,6 +13,7 @@ import {
     Search,
     MessageSquare,
     Map as MapIcon,
+    LayoutGrid,
 } from "lucide-react"
 
 import {
@@ -48,6 +49,11 @@ const navItems = [
         title: "Estadísticas",
         url: "/statistics",
         icon: BarChart3,
+    },
+    {
+        title: "Paneles",
+        url: "/paneles",
+        icon: LayoutGrid,
     },
     {
         title: "Monitor",
