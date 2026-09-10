@@ -8,6 +8,7 @@ import { ColumnLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { Map } from "react-map-gl/maplibre";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
+import { ESTILO_BASE_OSCURO } from "@/lib/basemap";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 // Vista inicial centrada en Neuquén Capital
@@ -358,7 +359,7 @@ export default function Map3D() {
                 }}
             >
                 <Map
-                    mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+                    mapStyle={ESTILO_BASE_OSCURO}
                     attributionControl={false}
                 />
             </DeckGL>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, LayersControl, LayerGroup } from "react-leaflet";
+import { MapContainer, GeoJSON, Marker, Popup, LayersControl, LayerGroup } from "react-leaflet";
 import HeatmapLayer, { HeatmapPoint } from "./HeatmapLayer";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -17,6 +17,7 @@ import { convertGeoJSONCoordinates } from '@/lib/geoUtils';
 import { createCategoryIcon } from '@/lib/categoryIcons';
 
 import MapFilters from "./MapFilters";
+import { CapaBaseVectorial } from "./CapaBaseVectorial";
 import type { Feature, Geometry } from "geojson";
 import type {
     BarrioFeature,
@@ -356,10 +357,9 @@ export default function RestaurantMap() {
                 style={{ height: "100%", width: "100%" }}
                 className="z-0"
             >
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                />
+                {/* Mapa base vectorial: el raster de CARTO llega con "API KEY REQUIRED"
+                    estampado. Ver lib/basemap.ts. */}
+                <CapaBaseVectorial />
 
                 <LayersControl position="topright">
                     <LayersControl.Overlay checked name="Barrios y Zonas">
