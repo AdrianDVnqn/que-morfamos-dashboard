@@ -197,7 +197,41 @@ Dos cosas que sólo aparecieron midiendo, y que quedaron escritas en el SQL:
 El front perdió 223 líneas. Verificado en el navegador que los KPIs, los gráficos de zona y
 categoría, las cuatro distribuciones y la serie semanal dan exactamente lo mismo que antes.
 
+### 🗺️ El mapa 2D pedía una API key y el 3D no: por qué
+
+Los dos usan CARTO. La diferencia es el **formato**, y explica todo:
+
+| | mapa 2D (Leaflet) | mapa 3D (MapLibre) |
+|---|---|---|
+| pedía | `dark_all/{z}/{x}/{y}.png` — **raster** | `dark-matter-gl-style.json` — **vectorial** |
+| el servidor manda | una imagen ya dibujada | geometrías + reglas de estilo |
+| quién dibuja | CARTO | el navegador |
+
+CARTO le cortó el tier anónimo al raster. No falla: responde **HTTP 200** y llega con
+**"API KEY REQUIRED" estampado sobre la imagen** — por eso se veía roto sin dar ningún error. Se
+comprobó descargando un tile y mirándolo.
+
+En vectorial no hay dónde estamparlo: el dibujo ocurre en el cliente. Tendrían que agregarlo como
+capa en el `style.json`, y se revisaron las 93 capas: ninguna la trae. **Ese es todo el motivo por
+el que el 3D se veía bien mientras el 2D no.**
+
+**El arreglo** usa el puente `maplibre-gl-leaflet` en vez de migrar el mapa a MapLibre: así el
+resto no se toca y siguen siendo Leaflet puro los marcadores, los barrios, el heatmap y el control
+de capas. La URL del estilo se mudó a `lib/basemap.ts` y **la leen los dos mapas**: si CARTO
+también cierra el vectorial —que es una decisión suya, no un contrato— ahora se cambia en un solo
+lugar.
+
+Alternativas descartadas midiendo: **Stadia Alidade Smooth Dark** (la del frontend web) es más
+clara y mucho más cargada de etiquetas, desentona con el panel; **OpenFreeMap Fiord** resultó azul
+y no oscuro; **Esri Dark Gray** ya se había descartado en agosto por no tener datos sobre z16 en
+Neuquén.
+
 ### 📌 Pendiente detectado, no resuelto
+
+En el dev server aparecen dos **HTTP 500** sin recurso identificable, también en rutas sin mapa
+(`/logs`), y un `Cannot read properties of undefined (reading 'maxTextureDimension2D')` de luma.gl
+al desmontar el mapa 3D. Ninguno se reprodujo como fallo visible ni afecta el build, pero quedan
+anotados sin explicación.
 
 El warning `width(-1) and height(-1)` de Recharts **sigue apareciendo** en consola, pese a estar
 anotado como resuelto en la sesión del 14-ene. No rompe nada visible, pero conviene mirarlo con
