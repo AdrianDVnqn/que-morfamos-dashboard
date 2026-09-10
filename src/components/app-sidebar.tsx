@@ -36,6 +36,11 @@ const navItems = [
         icon: LayoutDashboard,
     },
     {
+        title: "Paneles",
+        url: "/paneles",
+        icon: LayoutGrid,
+    },
+    {
         title: "Explorar Lugares",
         url: "/lugares",
         icon: Search,
@@ -49,11 +54,6 @@ const navItems = [
         title: "Estadísticas",
         url: "/statistics",
         icon: BarChart3,
-    },
-    {
-        title: "Paneles",
-        url: "/paneles",
-        icon: LayoutGrid,
     },
     {
         title: "Monitor",
